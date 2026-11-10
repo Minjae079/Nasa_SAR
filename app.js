@@ -302,23 +302,67 @@
     }
   }
 
+  function extractImageUrl(input) {
+    // /api/preview?url=... 에서 원본 URL 추출
+    const parsed = new URL(input, window.location.origin);
+    const rawUrl = parsed.searchParams.get("url") || parsed.href;
+
+    const imageUrl = new URL(rawUrl);
+
+    // NASA 이미지 주소 확인
+    if (
+      imageUrl.protocol !== "https:" ||
+      imageUrl.hostname !== "nisar.asf.earthdatacloud.nasa.gov"
+    ) {
+      throw new Error("Invalid NASA image URL");
+    }
+
+    // 이미지 확장자 뒤에 중복 경로가 붙은 경우 제거
+    const match = imageUrl.pathname.match(/\.(png|jpg|jpeg|webp)(?=\/|$)/i);
+
+    if (match) {
+      imageUrl.pathname = imageUrl.pathname.slice(
+        0,
+        match.index + match[0].length
+      );
+    }
+
+    return imageUrl.href;
+  }
+
   function setImage(elementId, errorId, url) {
     const image = $(elementId);
     const error = $(errorId);
+
     error.hidden = true;
     image.hidden = false;
+
     image.onload = () => {
       image.hidden = false;
       error.hidden = true;
     };
+
     image.onerror = () => {
       image.hidden = true;
       error.hidden = false;
+      console.error("Image loading failed:", image.src);
     };
-    // The NASA browse URL never contains credentials. The proxy validates
-    // the remote domain and can use server-only Earthdata credentials if set.
-    image.src = "/api/previe?url=" + encodeURIComponent(url);
+
+    try {
+      const actualUrl = extractImageUrl(url);
+
+      console.log("Original URL:", url);
+      console.log("Extracted URL:", actualUrl);
+
+      // NASA 이미지를 직접 표시
+      image.src = actualUrl;
+    } catch (err) {
+      console.error(err);
+      image.hidden = true;
+      error.hidden = false;
+    }
   }
+
   function renderPair(pair) {
     $("sarCompareGrid").hidden = false;
     $("beforeDate").textContent = formatDate(pair.before.date);
