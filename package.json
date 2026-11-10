@@ -1,0 +1,12 @@
+{
+  "name": "sarscope-nisar-comparison",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "description": "Interactive NASA NISAR browse preview explorer; no raw SAR processing",
+  "scripts": {
+    "dev": "node dev-server.mjs",
+    "test": "node --test test/*.test.mjs"
+  },
+  "engines": {"node": ">=22"}
+}

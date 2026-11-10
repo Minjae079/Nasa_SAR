@@ -1,0 +1,10 @@
+{
+  "description": "OPTIONAL FUTURE LAYER CONFIGURATION — replace all values with validated SAR outputs. Do not copy this file to sar_layers.json until real rasters are processed.",
+  "study_area": "Illinois Tech (example only)",
+  "before_date": "YYYY-MM-DD",
+  "after_date": "YYYY-MM-DD",
+  "before_image": "assets/actual_before_reprojected_to_epsg4326.png",
+  "after_image": "assets/actual_after_reprojected_to_epsg4326.png",
+  "bounds": [[41.82, -87.65], [41.85, -87.61]],
+  "notes": "Replace example bounds with exact north-up raster georeferencing. Images must share the same bounds, pixel grid, polarization, calibration and visualization scale."
+}
