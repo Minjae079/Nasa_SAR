@@ -1,34 +1,195 @@
-// A bounded proxy for NASA browse PNGs. Raw HDF5 never flows through this route.
-const nasaHost='nisar.asf.earthdatacloud.nasa.gov';
+/**
+ * SARSCOPE - NASA SAR Preview Proxy
+ *
+ * Fetches NASA/ASF NISAR GCOV browse images.
+ * Retries alternative preview formats when unavailable.
+ */
 
+const NASA_HOST = "nisar.asf.earthdatacloud.nasa.gov";
+
+const MAX_BYTES = 4 * 1024 * 1024;
+
+// Alternative image filename formats
+const SUFFIXES = [
+  "_LATLON.png",
+  ".png",
+  "_NATIVE_A_HHHH.png",
+  "_LATLON_thumbnail.png",
+];
+
+// Validate URL and generate fallback candidates
+export function browseCandidates(input) {
+  let url;
+
+  try {
+    url = new URL(input);
+  } catch {
+    return [];
+  }
+
+  // Only allow requests to the NASA ASF host
+  if (
+    url.protocol !== "https:" ||
+    url.hostname !== NASA_HOST ||
+    url.port ||
+    url.username ||
+    url.password ||
+    url.search ||
+    url.hash
+  ) {
+    return [];
+  }
+
+  const match = url.pathname.match(
+    /^\/BROWSE\/(NISAR_L2_GCOV_(?:PROVISIONAL_V1|BETA_V1|V1))\/(NISAR_L2_PR_GCOV_[A-Z0-9_]+)\/([A-Z0-9_]+)\.png$/i
+  );
+
+  if (!match) return [];
+
+  if (match[2] !== match[3] && !match[3].startsWith(match[2] + "_")) {
+    return [];
+  }
+
+  const dir = `/BROWSE/${match[1]}/${match[2]}/`;
+  const filename = match[2];
+
+  const candidates = [
+    url.href,
+    ...SUFFIXES.map(
+      (suffix) => `https://${NASA_HOST}${dir}${filename}${suffix}`
+    ),
+  ];
+
+  return [...new Set(candidates)];
+}
+
+// Vercel Serverless API Handler
 export async function GET(request) {
-  const url=new URL(request.url);
-  const input=url.searchParams.get('url');
-  if (!input || input.length>2000) return new Response('Missing or invalid image URL.',{status:400});
-  let nasa;
-  try { nasa=new URL(input); } catch { return new Response('Invalid URL.',{status:400}); }
-  if (nasa.protocol!=='https:' || nasa.hostname!==nasaHost || nasa.port || nasa.username || nasa.password ||
-      nasa.search || nasa.hash || !nasa.pathname.startsWith('/BROWSE/NISAR_L2_GCOV_') ||
-      !/^\/BROWSE\/NISAR_L2_GCOV_[A-Z0-9_-]+\/NISAR_L2_PR_GCOV_[A-Z0-9_]+\/NISAR_L2_PR_GCOV_[A-Z0-9_]+\.png$/i.test(nasa.pathname)) {
-    return new Response('Only ASF NISAR GCOV PNG previews are allowed.',{status:400});
+  const input = new URL(request.url).searchParams.get("url");
+
+  if (!input || input.length > 2000) {
+    return new Response("Missing or invalid URL.", {
+      status: 400,
+    });
   }
-  const headers={Accept:'image/png'};
-  if (process.env.EARTHDATA_TOKEN) headers.Authorization=`Bearer ${process.env.EARTHDATA_TOKEN}`;
-  let upstream;
-  try { upstream=await fetch(nasa,{headers,redirect:'error',signal:AbortSignal.timeout(16000)}); }
-  catch { return new Response('NASA preview service unreachable.',{status:502}); }
-  if (!upstream.ok) return new Response(`NASA preview not accessible (HTTP ${upstream.status}).`,{status:502});
-  const type=upstream.headers.get('content-type') || '';
-  if (!type.toLowerCase().includes('image/png') && !type.toLowerCase().includes('application/octet-stream')) {
-    return new Response('Unexpected preview response type.',{status:502});
+
+  const candidates = browseCandidates(input);
+
+  if (!candidates.length) {
+    return new Response("Invalid ASF NISAR browse URL.", {
+      status: 400,
+    });
   }
-  const size=Number(upstream.headers.get('content-length')||0);
-  if (size>24*1024*1024) return new Response('Preview exceeds 24MB limit.',{status:413});
-  let body;
-  try {body=await upstream.arrayBuffer();}
-  catch {return new Response('Could not read preview image.',{status:502});}
-  if (body.byteLength>24*1024*1024) return new Response('Preview exceeds 24MB limit.',{status:413});
-  const png=new Uint8Array(body);
-  if (png.length<8 || png[0]!==137 || png[1]!==80 || png[2]!==78 || png[3]!==71) return new Response('NASA response was not a PNG file.',{status:502});
-  return new Response(body,{headers:{'Content-Type':'image/png','Cache-Control':'public, s-maxage=86400, stale-while-revalidate=604800'}});
+
+  const headers = {
+    Accept: "image/png",
+  };
+
+  // Optional server-side Earthdata token
+  if (process.env.EARTHDATA_TOKEN) {
+    headers.Authorization = `Bearer ${process.env.EARTHDATA_TOKEN}`;
+  }
+
+  const statuses = [];
+
+  // Try each candidate image
+  for (const candidate of candidates) {
+    let response;
+
+    try {
+      response = await fetch(candidate, {
+        headers,
+        redirect: "manual",
+        signal: AbortSignal.timeout(5500),
+      });
+    } catch (err) {
+      statuses.push(`network:${err?.name || "Error"}`);
+      continue;
+    }
+
+    const fileName = new URL(candidate).pathname.split("/").pop();
+
+    statuses.push(`${fileName}:HTTP${response.status}`);
+
+    // Authentication / redirect detection
+    if ([301, 302, 303, 307, 308, 401, 403].includes(response.status)) {
+      await response.body?.cancel().catch(() => {});
+
+      return new Response(
+        `ASF image authentication/redirect (HTTP ${response.status}).`,
+        { status: 401 }
+      );
+    }
+
+    // Try next image if current one is unavailable
+    if (!response.ok) {
+      await response.body?.cancel().catch(() => {});
+      continue;
+    }
+
+    const type = (response.headers.get("content-type") || "").toLowerCase();
+
+    // Accept only PNG or binary responses
+    if (
+      !type.includes("image/png") &&
+      !type.includes("application/octet-stream")
+    ) {
+      await response.body?.cancel().catch(() => {});
+      continue;
+    }
+
+    const size = Number(response.headers.get("content-length") || 0);
+
+    if (size > MAX_BYTES) {
+      await response.body?.cancel().catch(() => {});
+      continue;
+    }
+
+    let array;
+
+    try {
+      array = await response.arrayBuffer();
+    } catch {
+      continue;
+    }
+
+    const bytes = new Uint8Array(array);
+
+    // Verify PNG signature and size
+    const pngSignature = [137, 80, 78, 71, 13, 10, 26, 10];
+
+    if (
+      bytes.length > MAX_BYTES ||
+      bytes.length < 8 ||
+      !pngSignature.every((value, index) => bytes[index] === value)
+    ) {
+      continue;
+    }
+
+    // Successfully return NASA image
+    return new Response(array, {
+      status: 200,
+      headers: {
+        "Content-Type": "image/png",
+        "Cache-Control": "public, s-maxage=3600, stale-while-revalidate=86400",
+        "X-SARSCOPE-Variant": fileName.slice(-60),
+      },
+    });
+  }
+
+  // All preview candidates failed
+  const notFound =
+    statuses.length > 0 &&
+    statuses.every((status) => status.endsWith(":HTTP404"));
+
+  return new Response(
+    `No usable ASF Browse PNG. Attempts: ${statuses.join(" | ")}`,
+    {
+      status: notFound ? 404 : 502,
+      headers: {
+        "Content-Type": "text/plain; charset=utf-8",
+        "Cache-Control": "no-store",
+      },
+    }
+  );
 }
