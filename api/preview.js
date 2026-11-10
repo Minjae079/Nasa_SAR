@@ -7,6 +7,29 @@
 
 const NASA_HOST = "nisar.asf.earthdatacloud.nasa.gov";
 
+function normalizeImageUrl(input) {
+  try {
+    const url = new URL(input);
+    const parts = url.pathname.split("/");
+
+    // Check whether the last two path segments
+    // contain the same PNG filename.
+    if (
+      parts.length >= 3 &&
+      parts.at(-1) === parts.at(-2) &&
+      /\.png$/i.test(parts.at(-1))
+    ) {
+      // Remove the duplicated filename.
+      url.pathname = parts.slice(0, -1).join("/");
+    }
+
+    return url.href;
+  } catch (error) {
+    console.error("Invalid image URL:", error);
+    return input;
+  }
+}
+
 const MAX_BYTES = 4 * 1024 * 1024;
 
 // Alternative image filename formats
@@ -22,7 +45,8 @@ export function browseCandidates(input) {
   let url;
 
   try {
-    url = new URL(input);
+    const cleanedInput = normalizeImageUrl(input);
+    url = new URL(cleanedInput);
   } catch {
     return [];
   }
