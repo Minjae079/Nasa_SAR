@@ -412,21 +412,23 @@
     }
   
     .scene-globe.is-comparing .compare-title {
-      display: block;
-      grid-column: auto;
-      grid-row: auto;
-  
-      width: 100%;
-      min-height: 100px;
-      padding: 18px 90px 18px 20px;
-  
-      border: 1px solid #6babb2;
-      border-radius: 16px;
-      background: rgba(8, 23, 32, 0.94);
-  
-      text-align: center;
-      box-sizing: border-box;
-    }
+        position: relative;
+        width: 100%;
+        min-height: 100px;
+      
+        display: flex;
+        flex-direction: column;
+        justify-content: center; /* 세로 중앙 */
+        align-items: center;     /* 가로 중앙 */
+        text-align: center;
+      
+        padding: 0;
+        box-sizing: border-box;
+      
+        border: 1px solid #6babb2;
+        border-radius: 16px;
+        background: rgba(8, 23, 32, 0.94);
+      }
   
     .scene-globe.is-comparing .compare-title h2 {
       font-size: 19px;
