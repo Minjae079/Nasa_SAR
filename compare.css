@@ -42,3 +42,316 @@
 /* Clear the fixed site header/footer; comparison scrolls within the main viewport. */
 .scene-compare{padding-top:110px;padding-bottom:85px}
 @media(max-width:850px){.scene-compare{padding-top:82px;padding-bottom:75px}}
+/* ===========================================
+   SARSCOPE - Floating SAR Speech Bubble UI
+   =========================================== */
+
+/* 비교 모드에서는 기존 소개 UI 숨기기 */
+.scene-globe.is-comparing .hero-content,
+.scene-globe.is-comparing .scene-rail,
+.scene-globe.is-comparing .planet-label,
+.scene-globe.is-comparing .view-status,
+.scene-globe.is-comparing .interaction-guide {
+  display: none;
+}
+
+/* 지구본 위에 투명한 비교 UI 표시 */
+.scene-globe .scene-compare {
+  position: absolute;
+  inset: 0;
+  z-index: 12;
+
+  display: block;
+  min-height: 0;
+  padding: 0;
+  overflow: hidden;
+
+  background: transparent;
+
+  /* 빈 공간에서는 지구본 조작 가능 */
+  pointer-events: none;
+}
+
+.scene-globe .scene-compare[hidden] {
+  display: none !important;
+}
+
+/* 선택한 지역 정보 */
+.scene-globe .compare-top {
+  position: absolute;
+  top: 98px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(440px, 42vw);
+
+  z-index: 3;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+
+  pointer-events: auto;
+}
+
+.scene-globe .compare-title {
+  grid-column: 1 / -1;
+  grid-row: 1;
+
+  padding: 12px;
+  text-align: center;
+
+  border: 1px solid #6babb2;
+  border-radius: 16px;
+  background: rgba(8, 23, 32, 0.9);
+  backdrop-filter: blur(12px);
+}
+
+.scene-globe .compare-title h2 {
+  font-size: 19px;
+}
+
+/* 닫기 버튼 */
+.scene-globe #compareBack {
+  min-height: 34px;
+  padding: 0 12px;
+  font-size: 11px;
+}
+
+/* 비교 중에는 별도 지도 전환 버튼 숨김 */
+.scene-globe #compareMap {
+  display: none;
+}
+
+/* 날짜 비교군 선택 */
+.scene-globe .compare-chooser {
+  position: absolute;
+  top: 222px;
+  left: 50%;
+  transform: translateX(-50%);
+
+  width: min(420px, 40vw);
+  z-index: 3;
+
+  display: grid;
+  gap: 6px;
+  padding: 10px;
+
+  border: 1px solid #426770;
+  border-radius: 12px;
+  background: rgba(9, 28, 38, 0.92);
+
+  pointer-events: auto;
+}
+
+.scene-globe .compare-chooser select {
+  width: 100%;
+  min-width: 0;
+  padding: 9px;
+}
+
+/* 비교 이미지 컨테이너 */
+.scene-globe .sar-compare-grid {
+  position: static;
+  display: block;
+  pointer-events: none;
+}
+
+/* 공통 말풍선 스타일 */
+.scene-globe .sar-photo-panel {
+  position: absolute;
+  top: clamp(300px, 34vh, 360px);
+
+  width: min(28vw, 415px);
+  min-height: 0;
+  max-height: none;
+  overflow: visible;
+
+  padding: 16px;
+  border: 1px solid #8dd9e7;
+  border-radius: 20px;
+
+  background: rgba(7, 22, 33, 0.94);
+  backdrop-filter: blur(16px);
+
+  box-shadow:
+    0 8px 40px rgba(0, 0, 0, 0.55),
+    0 0 18px rgba(87, 212, 255, 0.24);
+
+  pointer-events: auto;
+}
+
+/* BEFORE는 왼쪽 */
+.scene-globe .sar-photo-panel:first-child {
+  left: 24px;
+}
+
+/* AFTER는 오른쪽 */
+.scene-globe .sar-photo-panel:last-child {
+  right: 24px;
+}
+
+/* 말풍선 꼬리 */
+.scene-globe .sar-photo-panel::after {
+  content: "";
+  position: absolute;
+  top: 35%;
+
+  width: 26px;
+  height: 38px;
+  background: #143446;
+}
+
+/* 왼쪽 말풍선 → 지구본 방향 */
+.scene-globe .sar-photo-panel:first-child::after {
+  right: -25px;
+  clip-path: polygon(0 0, 100% 50%, 0 100%);
+}
+
+/* 오른쪽 말풍선 → 지구본 방향 */
+.scene-globe .sar-photo-panel:last-child::after {
+  left: -25px;
+  clip-path: polygon(100% 0, 0 50%, 100% 100%);
+}
+
+/* SAR 이미지 크기 */
+.scene-globe .sar-image-frame {
+  height: clamp(160px, 25vh, 260px);
+  min-height: 0;
+  aspect-ratio: auto;
+}
+
+.scene-globe .sar-image-frame img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+/* 데이터 검색 상태 */
+.scene-globe .compare-status {
+  position: absolute;
+  left: 50%;
+  bottom: 84px;
+  transform: translateX(-50%);
+
+  z-index: 3;
+  width: min(560px, 52vw);
+  min-height: 0;
+
+  padding: 8px 12px;
+  text-align: center;
+  pointer-events: auto;
+}
+
+/* 기존 긴 설명문은 접기 */
+.scene-globe .compare-footer-note {
+  display: none;
+}
+
+/* 지구본 조작 버튼 */
+.scene-globe.is-comparing .globe-controls {
+  z-index: 13;
+  left: 50%;
+  right: auto;
+  bottom: 20px;
+  transform: translateX(-50%);
+}
+
+
+/* ===========================================
+   Mobile responsive layout
+   =========================================== */
+
+@media (max-width: 900px) {
+
+  /* 모바일에서 지구본 공간 확보 */
+  .scene-globe.is-comparing .globe-viz {
+    inset: 74px 0 38dvh;
+  }
+
+  .scene-globe .compare-top {
+    top: 76px;
+    width: calc(100vw - 24px);
+    max-width: 460px;
+  }
+
+  .scene-globe .compare-title {
+    padding: 8px 11px;
+  }
+
+  .scene-globe .compare-title h2 {
+    font-size: 15px;
+    margin: 1px 0;
+  }
+
+  .scene-globe .compare-title p {
+    font-size: 10px;
+  }
+
+  .scene-globe .compare-chooser {
+    top: 176px;
+    width: calc(100vw - 30px);
+    max-width: 400px;
+  }
+
+  /* 모바일에서는 하단에 Before / After 표시 */
+  .scene-globe .sar-compare-grid {
+    position: absolute;
+    inset: auto 10px 57px;
+    height: min(35dvh, 310px);
+
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 9px;
+  }
+
+  .scene-globe .sar-photo-panel,
+  .scene-globe .sar-photo-panel:first-child,
+  .scene-globe .sar-photo-panel:last-child {
+    position: relative;
+
+    top: auto;
+    left: auto;
+    right: auto;
+
+    width: auto;
+    max-height: 100%;
+    padding: 9px;
+    gap: 6px;
+
+    overflow: hidden;
+    border-radius: 12px;
+  }
+
+  .scene-globe .sar-photo-panel::after {
+    display: none;
+  }
+
+  .scene-globe .sar-photo-heading h3 {
+    font-size: 12px;
+  }
+
+  .scene-globe .sar-photo-pill,
+  .scene-globe .sar-file-meta {
+    display: none;
+  }
+
+  .scene-globe .sar-image-frame {
+    min-height: 0;
+    height: auto;
+    aspect-ratio: 1.1;
+  }
+
+  .scene-globe .compare-status {
+    left: 10px;
+    bottom: 44px;
+    transform: none;
+
+    width: calc(100vw - 20px);
+    box-sizing: border-box;
+    font-size: 10px;
+    padding: 5px 8px;
+  }
+
+  .scene-globe.is-comparing .globe-controls {
+    display: none;
+  }
+}

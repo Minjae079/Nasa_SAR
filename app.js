@@ -141,7 +141,11 @@
         name || (isNearIIT(lat, lng) ? "Illinois Tech" : "Selected location"),
     };
     globe.pointOfView(
-      { lat, lng, altitude: 0.38 },
+      {
+        lat,
+        lng,
+        altitude: mobileLayout.matches ? 1.65 : 1.15,
+      },
       reducedMotion.matches ? 0 : 1550
     );
     if (reducedMotion.matches) {
@@ -153,6 +157,7 @@
   function goHome() {
     clearTimeout(flyTimer);
     mode = "globe";
+    globeScene.classList.remove("is-comparing");
     mapScene.hidden = true;
     compareScene.hidden = true;
     globeScene.hidden = false;
@@ -165,6 +170,22 @@
         globe.controls().autoRotate = true;
     }
     $("navExplore").classList.add("is-active");
+  }
+  function closeComparison() {
+    clearTimeout(flyTimer);
+
+    // 이전 API 요청 무효화
+    comparisonRequestId++;
+
+    // 비교 패널 숨기기
+    compareScene.hidden = true;
+
+    // 일반 지구본 화면으로 돌아가기
+    globeScene.classList.remove("is-comparing");
+    globeScene.hidden = false;
+
+    mode = "globe";
+    resizeGlobe();
   }
   function initMap() {
     if (map || typeof L === "undefined") return Boolean(map);
@@ -380,6 +401,7 @@
       setImage(item + "Image", item + "Error", pair[item].browse);
     }
   }
+
   async function openComparison(lat, lng) {
     clearTimeout(flyTimer);
     const requestId = ++comparisonRequestId;
@@ -391,7 +413,8 @@
         ? "Illinois Tech · Chicago"
         : "Selected Earth region",
     };
-    globeScene.hidden = true;
+    globeScene.hidden = false;
+    globeScene.classList.add("is-comparing");
     mapScene.hidden = true;
     compareScene.hidden = false;
     $("compareRegion").textContent = currentTarget.name;
@@ -539,7 +562,7 @@
   }
   function bindControls() {
     $("brandHome").addEventListener("click", goHome);
-    $("compareBack").addEventListener("click", goHome);
+    $("compareBack").addEventListener("click", closeComparison);
     $("compareMap").addEventListener("click", () =>
       openMap(currentTarget.lat, currentTarget.lng)
     );
@@ -587,6 +610,12 @@
     );
   }
   function start() {
+    // 기존 비교 화면을 지구본 내부로 이동
+    globeScene.appendChild(compareScene);
+
+    // 닫기 버튼 이름 변경
+    $("compareBack").textContent = "✕ Close";
+
     bindControls();
     initGlobe();
     // No API keys, SAR claims or mock detection results are embedded in the demo.
