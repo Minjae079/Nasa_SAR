@@ -375,17 +375,17 @@
       box-sizing: border-box;
     }
   
-    /* BEFORE - 왼쪽 */
+    /* BEFORE - 왼쪽 말풍선 사이 간격 */ 
     .scene-globe.is-comparing
     .sar-photo-panel:first-child {
-      left: clamp(18px, 8.5vw, 150px);
+      left: clamp(18px, 13vw, 150px);
       right: auto;
     }
   
     /* AFTER - 오른쪽 */
     .scene-globe.is-comparing
     .sar-photo-panel:last-child {
-      right: clamp(18px, 8.5vw, 150px);
+      right: clamp(18px, 13vw, 150px);
       left: auto;
     }
   
@@ -551,6 +551,117 @@
       box-sizing: border-box;
   
       z-index: 18;
+    }
+  }
+  
+
+/* =========================================
+   SARSCOPE - Map / SAR View Switcher
+   ========================================= */
+
+/* 1. SAR 비교 화면에서 Map 버튼 다시 표시 */
+.scene-globe.is-comparing #compareMap {
+    display: inline-flex !important;
+  
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    right: auto;
+  
+    z-index: 22;
+  
+    align-items: center;
+    justify-content: center;
+  
+    min-height: 34px;
+    width: auto;
+    padding: 0 12px;
+  
+    border: 1px solid #78c8d7;
+    border-radius: 8px;
+  
+    background: rgba(13, 45, 59, 0.96);
+    color: #dffaff;
+  
+    font-size: 11px;
+    font-weight: 700;
+    white-space: nowrap;
+  
+    pointer-events: auto;
+    cursor: pointer;
+  }
+  
+  .scene-globe.is-comparing #compareMap:hover {
+    background: #22576a;
+    border-color: #b5f0ff;
+  }
+  
+  /* 2. 상세 지도 상단의 버튼 배치 */
+  .scene-map .map-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  
+  /* 지도 → SAR Photos 버튼 */
+  .scene-map #backToComparison {
+    display: inline-flex;
+  
+    align-items: center;
+    justify-content: center;
+  
+    min-height: 45px;
+    padding: 0 16px;
+  
+    border: 1px solid #78c8d7;
+    border-radius: 8px;
+  
+    background: #123846;
+    color: #e4fbff;
+  
+    font-size: 12px;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+  
+  .scene-map #backToComparison:hover {
+    background: #216078;
+  }
+  
+  /* 3. 모바일 대응 */
+  @media (max-width: 800px) {
+  
+    .scene-globe.is-comparing #compareMap {
+      top: 9px;
+      left: 9px;
+      padding: 0 8px;
+      min-height: 32px;
+      font-size: 10px;
+    }
+  
+    .scene-map .map-toolbar {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+    }
+  
+    .scene-map #backToGlobe,
+    .scene-map #backToComparison {
+      width: 100%;
+      min-width: 0;
+      padding: 0 8px;
+      font-size: 11px;
+    }
+  
+    .scene-map .map-layer-toggle {
+      grid-column: 1 / -1;
+      justify-content: center;
+    }
+  
+    .scene-map .location-card {
+      top: 200px;
+      max-height: calc(100dvh - 270px);
     }
   }
   

@@ -29,6 +29,7 @@
   let stopped = false;
   let comparisonRequestId = 0;
   let comparisonPairs = [];
+  let lastComparedPoint = null;
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
   const mobileLayout = window.matchMedia("(max-width: 800px)");
 
@@ -228,6 +229,47 @@
     }).addTo(map);
     return true;
   }
+
+  function showComparisonFromMap() {
+    clearTimeout(flyTimer);
+
+    const lat = currentTarget.lat;
+    const lng = currentTarget.lng;
+
+    // 1. 상세 지도 숨기기
+    mapScene.hidden = true;
+
+    // 2. 기존 3D 지구본 다시 표시
+    globeScene.hidden = false;
+
+    // 3. 양쪽 SAR 말풍선 패널 표시
+    globeScene.classList.add("is-comparing");
+    compareScene.hidden = false;
+
+    // 4. 현재 화면 상태 변경
+    mode = "compare";
+
+    // 5. 지구본 렌더링 크기 재계산
+    resizeGlobe();
+
+    // 6. 기존 비교 지역과 같은 위치인지 확인
+    const sameLocation =
+      lastComparedPoint !== null &&
+      Math.abs(lastComparedPoint.lat - lat) < 0.000001 &&
+      Math.abs(lastComparedPoint.lng - lng) < 0.000001;
+
+    const hasLoadedImages =
+      comparisonPairs.length > 0 && !$("sarCompareGrid").hidden;
+
+    // 7. 같은 지역이라면 기존 이미지 유지
+    if (sameLocation && hasLoadedImages) {
+      return;
+    }
+
+    // 8. 다른 지역이라면 NASA 관측 정보 다시 검색
+    openComparison(lat, lng);
+  }
+
   function openMap(lat, lng) {
     clearTimeout(flyTimer);
     mode = "map";
@@ -404,6 +446,7 @@
 
   async function openComparison(lat, lng) {
     clearTimeout(flyTimer);
+    lastComparedPoint = { lat, lng };
     const requestId = ++comparisonRequestId;
     mode = "compare";
     currentTarget = {
@@ -565,6 +608,10 @@
     $("compareBack").addEventListener("click", closeComparison);
     $("compareMap").addEventListener("click", () =>
       openMap(currentTarget.lat, currentTarget.lng)
+    );
+    $('backToComparison').addEventListener(
+      'click',
+      showComparisonFromMap
     );
     $("pairSelect").addEventListener("change", (e) => {
       const pair = comparisonPairs[Number(e.target.value)];
