@@ -667,3 +667,45 @@
     }
   }
   
+
+/* =========================================
+   SARSCOPE - Smooth Camera Transitions
+   ========================================= */
+
+/* 상세 지도 페이드 효과 */
+.scene-map {
+  opacity: 1;
+  transition: opacity 650ms ease-in-out;
+}
+
+/* 지도 진입 및 이탈 애니메이션 */
+.scene-map.is-view-entering,
+.scene-map.is-view-leaving {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* 지구본 위 SAR 패널 전환 */
+.scene-globe .scene-compare {
+  transition: opacity 350ms ease;
+}
+
+/* SAR → 지도 이동 시 말풍선 숨김 */
+.scene-globe.is-map-zooming .scene-compare {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* SAR → 홈 이동 시 말풍선 숨김 */
+.scene-globe.is-heading-home .scene-compare {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* 접근성: 애니메이션 감소 설정 */
+@media (prefers-reduced-motion: reduce) {
+  .scene-map,
+  .scene-globe .scene-compare {
+    transition: none !important;
+  }
+}

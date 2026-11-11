@@ -33,6 +33,33 @@
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
   const mobileLayout = window.matchMedia("(max-width: 800px)");
 
+  /* SARSCOPE Camera Animation Settings */
+
+  const CAMERA = {
+    photo: 1.7, // SAR 사진 화면: 약간 확대
+    map: 0.3, // 상세 지도 진입 전: 크게 확대
+    photoTime: 1200, // 홈 → SAR (1.2초)
+    mapTime: 1000, // SAR → 지도 (1초)
+    returnTime: 1100, // 되돌아올 때 (1.1초)
+  };
+
+  let viewTimer = 0;
+  let viewToken = 0;
+
+  // 이전 화면 전환 애니메이션 취소
+  function resetViewMotion() {
+    clearTimeout(flyTimer);
+    clearTimeout(viewTimer);
+
+    viewToken++;
+
+    mapScene.classList.remove("is-view-entering", "is-view-leaving");
+
+    globeScene.classList.remove("is-map-zooming", "is-heading-home");
+
+    return viewToken;
+  }
+
   function setLocationPanelExpanded(expanded) {
     $("locationCard").classList.toggle("is-collapsed", !expanded);
     $("toggleLocationPanel").setAttribute("aria-expanded", String(expanded));
@@ -128,50 +155,106 @@
     );
     globe.pointOfView({ altitude: nextAlt }, 500);
   }
+
   function flyTo(lat, lng, name) {
+    const token = resetViewMotion();
+
     if (!globe) {
       openComparison(lat, lng);
       return;
     }
-    clearTimeout(flyTimer);
+
     stopRotation();
+
     currentTarget = {
       lat,
       lng,
       name:
         name || (isNearIIT(lat, lng) ? "Illinois Tech" : "Selected location"),
     };
+
+    const duration = reducedMotion.matches ? 0 : CAMERA.photoTime;
+
+    // 선택한 위치로 회전 + 약한 줌인
     globe.pointOfView(
       {
         lat,
         lng,
-        altitude: mobileLayout.matches ? 1.65 : 1.15,
+        altitude: CAMERA.photo,
       },
-      reducedMotion.matches ? 0 : 1550
+      duration
     );
-    if (reducedMotion.matches) {
+
+    // 카메라 이동이 끝난 후 SAR 말풍선 표시
+    flyTimer = window.setTimeout(() => {
+      if (token !== viewToken) return;
+
       openComparison(lat, lng);
-    } else {
-      flyTimer = window.setTimeout(() => openComparison(lat, lng), 1620);
-    }
+    }, duration + 50);
   }
+
   function goHome() {
-    clearTimeout(flyTimer);
-    mode = "globe";
-    globeScene.classList.remove("is-comparing");
-    mapScene.hidden = true;
-    compareScene.hidden = true;
-    globeScene.hidden = false;
+    const token = resetViewMotion();
+
+    const wasInMap = !mapScene.hidden;
+
+    mode = "return-home";
     comparisonRequestId++;
-    if (map) map.closePopup();
+
+    globeScene.hidden = false;
     resizeGlobe();
-    if (globe) {
-      globe.pointOfView(START, 900);
-      if (!stopped && !reducedMotion.matches)
-        globe.controls().autoRotate = true;
+
+    if (wasInMap) {
+      // 지도 화면에서 홈으로 나올 때
+      compareScene.hidden = true;
+      mapScene.classList.add("is-view-leaving");
+
+      if (globe) {
+        globe.pointOfView(
+          {
+            lat: currentTarget.lat,
+            lng: currentTarget.lng,
+            altitude: CAMERA.map,
+          },
+          0
+        );
+      }
+    } else {
+      // SAR 사진 창을 서서히 숨김
+      globeScene.classList.add("is-heading-home");
     }
-    $("navExplore").classList.add("is-active");
+
+    const duration = reducedMotion.matches ? 0 : CAMERA.returnTime;
+
+    // 기본 지구본 크기로 복귀
+    if (globe) {
+      requestAnimationFrame(() => {
+        if (token !== viewToken) return;
+        globe.pointOfView(START, duration);
+      });
+    }
+
+    viewTimer = window.setTimeout(() => {
+      if (token !== viewToken) return;
+
+      mapScene.hidden = true;
+      compareScene.hidden = true;
+
+      mapScene.classList.remove("is-view-leaving");
+
+      globeScene.classList.remove(
+        "is-comparing",
+        "is-heading-home",
+        "is-map-zooming"
+      );
+
+      if (map) map.closePopup();
+
+      mode = "globe";
+      $("navExplore").classList.add("is-active");
+    }, duration + 50);
   }
+
   function closeComparison() {
     clearTimeout(flyTimer);
 
@@ -231,46 +314,117 @@
   }
 
   function showComparisonFromMap() {
-    clearTimeout(flyTimer);
+    const token = resetViewMotion();
 
-    const lat = currentTarget.lat;
-    const lng = currentTarget.lng;
+    const { lat, lng } = currentTarget;
 
-    // 1. 상세 지도 숨기기
-    mapScene.hidden = true;
-
-    // 2. 기존 3D 지구본 다시 표시
-    globeScene.hidden = false;
-
-    // 3. 양쪽 SAR 말풍선 패널 표시
-    globeScene.classList.add("is-comparing");
-    compareScene.hidden = false;
-
-    // 4. 현재 화면 상태 변경
-    mode = "compare";
-
-    // 5. 지구본 렌더링 크기 재계산
-    resizeGlobe();
-
-    // 6. 기존 비교 지역과 같은 위치인지 확인
+    // 기존 SAR 이미지 재사용 가능 여부
     const sameLocation =
+      typeof lastComparedPoint !== "undefined" &&
       lastComparedPoint !== null &&
       Math.abs(lastComparedPoint.lat - lat) < 0.000001 &&
       Math.abs(lastComparedPoint.lng - lng) < 0.000001;
 
-    const hasLoadedImages =
-      comparisonPairs.length > 0 && !$("sarCompareGrid").hidden;
+    const reuseImages = sameLocation && comparisonPairs.length > 0;
 
-    // 7. 같은 지역이라면 기존 이미지 유지
-    if (sameLocation && hasLoadedImages) {
-      return;
+    mode = "compare";
+
+    // 지구본 + SAR 패널 다시 표시
+    globeScene.hidden = false;
+    globeScene.classList.add("is-comparing");
+    compareScene.hidden = false;
+
+    resizeGlobe();
+
+    if (globe) {
+      stopRotation();
+
+      // 지구본을 확대된 상태에 위치시킴
+      globe.pointOfView({ lat, lng, altitude: CAMERA.map }, 0);
+
+      // 다시 SAR 사진 화면 크기로 줌아웃
+      requestAnimationFrame(() => {
+        if (token !== viewToken) return;
+
+        globe.pointOfView(
+          { lat, lng, altitude: CAMERA.photo },
+          reducedMotion.matches ? 0 : CAMERA.returnTime
+        );
+      });
     }
 
-    // 8. 다른 지역이라면 NASA 관측 정보 다시 검색
-    openComparison(lat, lng);
+    // 기존 지도를 서서히 투명하게
+    mapScene.classList.add("is-view-leaving");
+
+    if (!reuseImages) {
+      $("sarCompareGrid").hidden = true;
+    }
+
+    viewTimer = window.setTimeout(
+      () => {
+        if (token !== viewToken) return;
+
+        mapScene.hidden = true;
+        mapScene.classList.remove("is-view-leaving");
+
+        // 같은 지역이면 기존 사진 유지
+        if (reuseImages) return;
+
+        // 지역이 변경되었다면 데이터 다시 검색
+        openComparison(lat, lng);
+      },
+      reducedMotion.matches ? 0 : 650
+    );
   }
 
   function openMap(lat, lng) {
+    const token = resetViewMotion();
+
+    mode = "transition-map";
+
+    const duration = reducedMotion.matches ? 0 : CAMERA.mapTime;
+
+    // 3D 지구본에서 깊은 줌인 시작
+    globeScene.classList.add("is-map-zooming");
+
+    if (globe) {
+      stopRotation();
+
+      globe.pointOfView(
+        {
+          lat,
+          lng,
+          altitude: CAMERA.map,
+        },
+        duration
+      );
+    }
+
+    // 확대 완료 후 Leaflet 지도로 전환
+    viewTimer = window.setTimeout(() => {
+      if (token !== viewToken) return;
+
+      // 지도 페이드인 준비
+      mapScene.classList.add("is-view-entering");
+
+      // 기존 지도 기능 실행
+      openMapNow(lat, lng);
+
+      // 지구본은 지도 뒤에 유지
+      globeScene.hidden = false;
+
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          if (token !== viewToken) return;
+
+          mapScene.classList.remove("is-view-entering");
+          globeScene.classList.remove("is-map-zooming");
+        });
+      });
+    }, duration + 40);
+  }
+
+  function openMapNow(lat, lng) {
     clearTimeout(flyTimer);
     mode = "map";
     currentTarget = {
@@ -278,7 +432,7 @@
       lng,
       name: isNearIIT(lat, lng) ? "Illinois Tech" : "Selected location",
     };
-    globeScene.hidden = true;
+    globeScene.hidden = false;
     compareScene.hidden = true;
     mapScene.hidden = false;
     $("selectedPlace").textContent = currentTarget.name;
@@ -301,13 +455,28 @@
     } else if (map.hasLayer(focusRing)) {
       map.removeLayer(focusRing);
     }
+
     requestAnimationFrame(() => {
       map.invalidateSize();
-      map.flyTo([lat, lng], near ? 15 : 12, {
-        animate: !reducedMotion.matches,
-        duration: reducedMotion.matches ? 0 : 1.1,
+
+      const targetZoom = near ? 15 : 12;
+
+      // 먼저 넓은 지역에서 시작
+      map.setView([lat, lng], reducedMotion.matches ? targetZoom : 5, {
+        animate: false,
       });
+
+      // 해당 지역까지 부드럽게 확대
+      if (!reducedMotion.matches) {
+        requestAnimationFrame(() => {
+          map.flyTo([lat, lng], targetZoom, {
+            animate: true,
+            duration: 1.25,
+          });
+        });
+      }
     });
+
     refreshRasterLayers(near);
   }
   function updateComparisonStatus(message, kind = "info") {
@@ -605,14 +774,11 @@
   }
   function bindControls() {
     $("brandHome").addEventListener("click", goHome);
-    $("compareBack").addEventListener("click", closeComparison);
+    $("compareBack").addEventListener("click", goHome);
     $("compareMap").addEventListener("click", () =>
       openMap(currentTarget.lat, currentTarget.lng)
     );
-    $('backToComparison').addEventListener(
-      'click',
-      showComparisonFromMap
-    );
+    $("backToComparison").addEventListener("click", showComparisonFromMap);
     $("pairSelect").addEventListener("change", (e) => {
       const pair = comparisonPairs[Number(e.target.value)];
       if (pair) renderPair(pair);
