@@ -355,3 +355,202 @@
     display: none;
   }
 }
+
+
+
+
+/* =============================================
+   SARSCOPE - Floating Panel Layout Fix
+   Desktop layout improvements
+   ============================================= */
+
+   @media (min-width: 901px) {
+
+    /* 1. Before / After 카드를 지구본 쪽으로 이동 */
+  
+    .scene-globe.is-comparing .sar-photo-panel {
+      top: clamp(280px, 34vh, 350px);
+      width: min(29vw, 430px);
+      padding: 16px;
+      box-sizing: border-box;
+    }
+  
+    /* BEFORE - 왼쪽 */
+    .scene-globe.is-comparing
+    .sar-photo-panel:first-child {
+      left: clamp(18px, 8.5vw, 150px);
+      right: auto;
+    }
+  
+    /* AFTER - 오른쪽 */
+    .scene-globe.is-comparing
+    .sar-photo-panel:last-child {
+      right: clamp(18px, 8.5vw, 150px);
+      left: auto;
+    }
+  
+    /* 사진 크기를 일정하게 유지 */
+    .scene-globe.is-comparing .sar-image-frame {
+      height: clamp(150px, 25vh, 260px);
+      min-height: 0;
+    }
+  
+  
+    /* 2. 선택 지역 정보 카드 */
+  
+    .scene-globe.is-comparing .compare-top {
+      position: absolute;
+      top: 96px;
+      left: 50%;
+      right: auto;
+      transform: translateX(-50%);
+  
+      width: min(460px, 44vw);
+      display: block;
+      z-index: 20;
+      pointer-events: auto;
+    }
+  
+    .scene-globe.is-comparing .compare-title {
+      display: block;
+      grid-column: auto;
+      grid-row: auto;
+  
+      width: 100%;
+      min-height: 100px;
+      padding: 18px 90px 18px 20px;
+  
+      border: 1px solid #6babb2;
+      border-radius: 16px;
+      background: rgba(8, 23, 32, 0.94);
+  
+      text-align: center;
+      box-sizing: border-box;
+    }
+  
+    .scene-globe.is-comparing .compare-title h2 {
+      font-size: 19px;
+      margin: 6px 0;
+    }
+  
+  
+    /* 3. Close 버튼을 카드 오른쪽 위에 배치 */
+  
+    .scene-globe.is-comparing #compareBack {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      left: auto;
+  
+      z-index: 21;
+      width: auto;
+      min-height: 34px;
+      padding: 0 12px;
+  
+      border: 1px solid #557c88;
+      border-radius: 8px;
+      background: #19323e;
+      color: #e9f7f9;
+  
+      font-size: 11px;
+      white-space: nowrap;
+    }
+  
+    .scene-globe.is-comparing #compareBack:hover {
+      background: #28505e;
+    }
+  
+  
+    /* 4. Frame 선택창을 지역 정보 카드 아래로 분리 */
+  
+    .scene-globe.is-comparing .compare-chooser {
+      position: absolute;
+      top: 220px;
+      left: 50%;
+      right: auto;
+      transform: translateX(-50%);
+  
+      width: min(440px, 42vw);
+      padding: 15px;
+  
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 9px;
+  
+      border: 1px solid #426770;
+      border-radius: 12px;
+      background: rgba(9, 28, 38, 0.95);
+  
+      box-sizing: border-box;
+      z-index: 19;
+      pointer-events: auto;
+    }
+  
+    .scene-globe.is-comparing .compare-chooser select {
+      width: 100%;
+      min-width: 0;
+      max-width: 100%;
+      padding: 11px 12px;
+    }
+  
+  
+    /* 5. 확대 / 축소 / 초기화 버튼 가로 배치 */
+  
+    .scene-globe.is-comparing .globe-controls {
+      position: absolute;
+      left: 50%;
+      right: auto;
+      bottom: 74px;
+      transform: translateX(-50%);
+  
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      justify-content: center;
+  
+      width: max-content;
+      padding: 3px;
+  
+      border: 1px solid #42616b;
+      border-radius: 10px;
+      background: rgba(9, 25, 34, 0.92);
+  
+      z-index: 25;
+    }
+  
+    .scene-globe.is-comparing .globe-controls button {
+      width: 42px;
+      height: 38px;
+      flex: 0 0 42px;
+      font-size: 22px;
+    }
+  
+    /* 가로 버튼 사이 세로 구분선 */
+    .scene-globe.is-comparing
+    .globe-controls .control-separator {
+      width: 1px;
+      height: 24px;
+      margin: 0 3px;
+      flex: 0 0 1px;
+      background: rgba(180, 215, 222, 0.24);
+    }
+  
+  
+    /* 6. 데이터 상태 메시지와 확대 버튼 분리 */
+  
+    .scene-globe.is-comparing .compare-status {
+      position: absolute;
+      left: 50%;
+      bottom: 136px;
+      transform: translateX(-50%);
+  
+      width: min(520px, 46vw);
+      padding: 10px 14px;
+  
+      text-align: center;
+      box-sizing: border-box;
+  
+      z-index: 18;
+    }
+  }
+  
