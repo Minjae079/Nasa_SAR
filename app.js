@@ -36,7 +36,7 @@
   /* SARSCOPE Camera Animation Settings */
 
   const CAMERA = {
-    photo: 1.7, // SAR 사진 화면: 약간 확대
+    photo: 2.0, // SAR 사진 화면: 약간 확대
     map: 0.3, // 상세 지도 진입 전: 크게 확대
     photoTime: 1200, // 홈 → SAR (1.2초)
     mapTime: 1000, // SAR → 지도 (1초)
