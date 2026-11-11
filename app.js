@@ -36,8 +36,8 @@
   /* SARSCOPE Camera Animation Settings */
 
   const CAMERA = {
-    photo: 2.0, // SAR 사진 화면: 약간 확대
-    map: 0.3, // 상세 지도 진입 전: 크게 확대
+    photo: 0.8, // SAR 사진 화면: 약간 확대
+    map: 0.5, // 상세 지도 진입 전: 크게 확대
     photoTime: 1200, // 홈 → SAR (1.2초)
     mapTime: 1000, // SAR → 지도 (1초)
     returnTime: 1100, // 되돌아올 때 (1.1초)
@@ -462,7 +462,7 @@
       const targetZoom = near ? 15 : 12;
 
       // 먼저 넓은 지역에서 시작
-      map.setView([lat, lng], reducedMotion.matches ? targetZoom : 5, {
+      map.setView([lat, lng], reducedMotion.matches ? targetZoom : 9, {
         animate: false,
       });
 
