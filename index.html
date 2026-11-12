@@ -21,7 +21,8 @@
     } catch (error) {
       console.error("Map engine could not load", error);
     }
-    await import("./app.js");
+    // 수정된 부분: load the restored direct-image loader instead of a cached proxy loader.
+    await import("./app.js?v=20261112-direct-images");
   </script>
 </head>
 <body>

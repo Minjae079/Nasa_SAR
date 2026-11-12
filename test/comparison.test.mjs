@@ -93,6 +93,15 @@ test('invalid image links clear the old source and show the image error', () => 
   assert.equal(node('error').hidden, false);
 });
 
+test('reported GCOV preview src becomes the decoded original NASA src', () => {
+  const { controller, node } = frontend(async () => result());
+  const input = '/api/preview?url=https%3A%2F%2Fnisar.asf.earthdatacloud.nasa.gov%2FBROWSE%2FNISAR_L2_GCOV_PROVISIONAL_V1%2FNISAR_L2_PR_GCOV_032_099_D_069_4005_DHDH_A_20261007T014929_20261007T015004_P05023_N_F_J_001%2FNISAR_L2_PR_GCOV_032_099_D_069_4005_DHDH_A_20261007T014929_20261007T015004_P05023_N_F_J_001_LATLON.png';
+  const expected = 'https://nisar.asf.earthdatacloud.nasa.gov/BROWSE/NISAR_L2_GCOV_PROVISIONAL_V1/NISAR_L2_PR_GCOV_032_099_D_069_4005_DHDH_A_20261007T014929_20261007T015004_P05023_N_F_J_001/NISAR_L2_PR_GCOV_032_099_D_069_4005_DHDH_A_20261007T014929_20261007T015004_P05023_N_F_J_001_LATLON.png';
+  controller.setImage('image', 'error', input);
+  assert.equal(node('image').src, expected);
+  assert.equal(node('error').hidden, true);
+});
+
 // 수정된 부분: verify automatic zoom navigation uses one persistent map instance.
 test('zoom alone enters and exits detail view without recreating the map', () => {
   let instances = 0;

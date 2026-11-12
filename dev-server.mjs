@@ -23,7 +23,7 @@ http.createServer(async(req,res)=>{
     const full=path.resolve(root,requested.slice(1));
     if(!full.startsWith(root+path.sep)){res.writeHead(403);res.end('Forbidden');return;}
     const data=await readFile(full);
-    res.writeHead(200,{'Content-Type':types[path.extname(full)]||'application/octet-stream'});
+    res.writeHead(200,{'Content-Type':types[path.extname(full)]||'application/octet-stream','Cache-Control':'no-store'});
     res.end(data);
   }catch(e){res.writeHead(404);res.end('Not found');}
 }).listen(port,()=>console.log(`SARSCOPE: http://localhost:${port}`));
