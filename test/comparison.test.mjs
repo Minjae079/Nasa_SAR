@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 
-function frontend(fetch, maplibregl) {
+function frontend(fetch, maplibregl, reduceMotion = true) {
   const nodes = new Map();
   const node = id => {
     if (!nodes.has(id)) nodes.set(id, {
@@ -15,7 +15,7 @@ function frontend(fetch, maplibregl) {
   };
   const context = vm.createContext({
     fetch, console, clearTimeout, encodeURIComponent, URL, maplibregl,
-    window: { matchMedia: () => ({ matches: true }), addEventListener() {} },
+    window: { matchMedia: query => ({ matches: query.includes('prefers-reduced-motion') ? reduceMotion : true }), addEventListener() {} },
     document: { getElementById: node, readyState: 'loading', addEventListener() {},
       createElement: () => ({}) },
   });
@@ -50,6 +50,38 @@ test('new searches clear previous results, including when the search fails', asy
   await controller.openComparison(30, -90);
   assert.equal(controller.state().lastComparedPoint, null);
   assert.equal(controller.state().comparisonPairs.length, 0);
+});
+
+test('reselecting a comparison location moves the pin before the search completes', async () => {
+  let pin;
+  let finish;
+  class Map {
+    constructor() { this.events = {}; }
+    getCanvas() { return { setAttribute() {} }; }
+    on(name, handler) { this.events[name] = handler; }
+    getLayer() { return false; }
+    flyTo(options) { this.flight = options; }
+    getZoom() { return 0; }
+  }
+  class Marker {
+    constructor() { pin = this; }
+    setLngLat(coords) { this.coords = coords; return this; }
+    addTo() { return this; }
+  }
+  const { controller } = frontend(() => new Promise(resolve => { finish = resolve; }), { Map, Marker }, false);
+  controller.initGlobe();
+  const map = controller.state().map;
+  map.events.load();
+  const first = controller.openComparison(30, -90);
+  assert.deepEqual(Array.from(pin.coords), [-90, 30]);
+  finish(result());
+  await first;
+  const second = controller.openComparison(35, -100);
+  assert.deepEqual(Array.from(pin.coords), [-100, 35]);
+  finish(result());
+  await second;
+  controller.openMap(35, -100);
+  assert.equal(map.flight.duration, 2400);
 });
 
 test('late responses cannot replace a newer location or repopulate results after leaving', async () => {

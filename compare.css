@@ -372,15 +372,16 @@
     /* BEFORE - 왼쪽 말풍선 사이 간격 */ 
     .scene-globe.is-comparing
     .sar-photo-panel:first-child {
-      left: clamp(18px, 13vw, 150px);
-      right: auto;
+      /* 수정된 부분: keep a bounded central gap regardless of screen width. */
+      left: auto;
+      right: calc(50% + clamp(70px, 8vw, 120px));
     }
   
     /* AFTER - 오른쪽 */
     .scene-globe.is-comparing
     .sar-photo-panel:last-child {
-      right: clamp(18px, 13vw, 150px);
-      left: auto;
+      right: auto;
+      left: calc(50% + clamp(70px, 8vw, 120px));
     }
   
     /* 사진 크기를 일정하게 유지 */

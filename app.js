@@ -5,6 +5,8 @@
   const START = { center: [-86, 34], zoom: 0.5, bearing: 0, pitch: 0 };
   const DETAIL_ZOOM = 6;
   const PHOTO_ZOOM = 2.5;
+  // 수정된 부분: duration in milliseconds for View local map.
+  const LOCAL_MAP_FLIGHT_MS = 2400;
   const $ = id => document.getElementById(id);
   const globeScene = $("globeScene");
   const mapScene = $("mapScene");
@@ -183,7 +185,7 @@
     globeScene.classList.remove("is-comparing");
     mode = "globe";
     // 수정된 부분: one uninterrupted camera flight, without screen-switch timers.
-    map.flyTo({ center: [lng, lat], zoom: isNearIIT(lat, lng) ? 15 : 12, duration: reducedMotion.matches ? 0 : 1300 });
+    map.flyTo({ center: [lng, lat], zoom: isNearIIT(lat, lng) ? 15 : 12, duration: reducedMotion.matches ? 0 : LOCAL_MAP_FLIGHT_MS });
     syncZoomMode();
     updateLocationPanel();
   }
@@ -287,6 +289,8 @@
         ? "Illinois Tech · Chicago"
         : "Selected Earth region",
     };
+    // 수정된 부분: move the selection pin immediately, even before images finish loading.
+    if (marker) marker.setLngLat([lng, lat]);
     globeScene.hidden = false;
     globeScene.classList.remove("is-detail");
     globeScene.classList.add("is-comparing");
