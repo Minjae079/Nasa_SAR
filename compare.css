@@ -163,7 +163,8 @@
   border: 1px solid #8dd9e7;
   border-radius: 20px;
 
-  background: rgba(7, 22, 33, 0.94);
+  /* 수정된 부분: use the same solid surface for the panel and its pointer. */
+  background: #071621;
   backdrop-filter: blur(16px);
 
   box-shadow:
@@ -190,20 +191,23 @@
   top: 35%;
 
   width: 26px;
-  height: 38px;
-  background: #143446;
+  height: 26px;
+  background: inherit;
+  border-top: 1px solid #8dd9e7;
+  border-right: 1px solid #8dd9e7;
+  pointer-events: none;
 }
 
 /* 왼쪽 말풍선 → 지구본 방향 */
 .scene-globe .sar-photo-panel:first-child::after {
-  right: -25px;
-  clip-path: polygon(0 0, 100% 50%, 0 100%);
+  right: -14px;
+  transform: rotate(45deg);
 }
 
 /* 오른쪽 말풍선 → 지구본 방향 */
 .scene-globe .sar-photo-panel:last-child::after {
-  left: -25px;
-  clip-path: polygon(100% 0, 0 50%, 100% 100%);
+  left: -14px;
+  transform: rotate(225deg);
 }
 
 /* SAR 이미지 크기 */
@@ -363,14 +367,14 @@
     /* 수정된 부분: center both cards as one grid; gap controls their separation. */
     .scene-globe.is-comparing .sar-compare-grid {
       position: absolute;
-      top: clamp(280px, 34vh, 350px);
+      top: clamp(326px, 36vh, 370px);
       left: 0;
       right: 0;
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 430px));
       justify-content: center;
       align-items: start;
-      column-gap: 18vw; /* 사진 사이 간격: 화면 너비에 비례 */
+      column-gap: 27vw; /* 수정된 부분: previous 18vw gap enlarged by 1.5x. */
       padding-inline: 24px; /* 화면 가장자리 여백 */
       pointer-events: none;
     }
@@ -466,17 +470,17 @@
   
     .scene-globe.is-comparing .compare-chooser {
       position: absolute;
-      top: 220px;
+      top: 204px; /* 수정된 부분: raise the frame chooser closer to the region card. */
       left: 50%;
       right: auto;
       transform: translateX(-50%);
   
       width: min(440px, 42vw);
-      padding: 15px;
+      padding: 10px 15px;
   
       display: grid;
       grid-template-columns: 1fr;
-      gap: 9px;
+      gap: 6px;
   
       border: 1px solid #426770;
       border-radius: 12px;
