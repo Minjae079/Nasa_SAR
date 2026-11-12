@@ -364,6 +364,14 @@
 
    @media (min-width: 901px) {
 
+    .scene-globe.is-comparing {
+      /* 수정된 부분: share the frame width with the space between the photos. */
+      --frame-panel-width: min(440px, 42vw);
+      --region-panel-top: 96px;
+      --region-panel-height: 100px;
+      --region-frame-gap: 4px;
+    }
+
     /* 수정된 부분: center both cards as one grid; gap controls their separation. */
     .scene-globe.is-comparing .sar-compare-grid {
       position: absolute;
@@ -374,7 +382,8 @@
       grid-template-columns: repeat(2, minmax(0, 430px));
       justify-content: center;
       align-items: start;
-      column-gap: 27vw; /* 수정된 부분: previous 18vw gap enlarged by 1.5x. */
+      /* 32px clearance on either side also leaves room for the panel pointers. */
+      column-gap: calc(var(--frame-panel-width) + 64px);
       padding-inline: 24px; /* 화면 가장자리 여백 */
       pointer-events: none;
     }
@@ -403,7 +412,7 @@
   
     .scene-globe.is-comparing .compare-top {
       position: absolute;
-      top: 96px;
+      top: var(--region-panel-top);
       left: 50%;
       right: auto;
       transform: translateX(-50%);
@@ -417,7 +426,7 @@
     .scene-globe.is-comparing .compare-title {
         position: relative;
         width: 100%;
-        min-height: 100px;
+        min-height: var(--region-panel-height);
       
         display: flex;
         flex-direction: column;
@@ -470,17 +479,18 @@
   
     .scene-globe.is-comparing .compare-chooser {
       position: absolute;
-      top: 204px; /* 수정된 부분: raise the frame chooser closer to the region card. */
+      /* 수정된 부분: reduce the space below the region card, not the frame padding. */
+      top: calc(var(--region-panel-top) + var(--region-panel-height) + var(--region-frame-gap));
       left: 50%;
       right: auto;
       transform: translateX(-50%);
   
-      width: min(440px, 42vw);
-      padding: 10px 15px;
+      width: var(--frame-panel-width);
+      padding: 15px;
   
       display: grid;
       grid-template-columns: 1fr;
-      gap: 6px;
+      gap: 9px;
   
       border: 1px solid #426770;
       border-radius: 12px;
