@@ -173,7 +173,7 @@
       compareScene.hidden = false;
     } else openComparison(lat, lng);
     refreshRasterLayers(false);
-    if (map) map.flyTo({ center: [lng, lat], zoom: PHOTO_ZOOM, duration: reducedMotion.matches ? 0 : 900 });
+    if (map) map.flyTo({ center: [lng, lat], zoom: PHOTO_ZOOM, duration: reducedMotion.matches ? 0 : LOCAL_MAP_FLIGHT_MS });
   }
   function openMap(lat, lng) {
     cameraDestination = null;

@@ -360,28 +360,32 @@
 
    @media (min-width: 901px) {
 
-    /* 1. Before / After 카드를 지구본 쪽으로 이동 */
-  
-    .scene-globe.is-comparing .sar-photo-panel {
+    /* 수정된 부분: center both cards as one grid; gap controls their separation. */
+    .scene-globe.is-comparing .sar-compare-grid {
+      position: absolute;
       top: clamp(280px, 34vh, 350px);
-      width: min(29vw, 430px);
+      left: 0;
+      right: 0;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 430px));
+      justify-content: center;
+      align-items: start;
+      column-gap: 12vw; /* 사진 사이 간격: 화면 너비에 비례 */
+      padding-inline: 24px; /* 화면 가장자리 여백 */
+      pointer-events: none;
+    }
+
+    .scene-globe.is-comparing .sar-photo-panel,
+    .scene-globe.is-comparing .sar-photo-panel:first-child,
+    .scene-globe.is-comparing .sar-photo-panel:last-child {
+      position: relative;
+      top: auto;
+      left: auto;
+      right: auto;
+      width: 100%;
+      min-width: 0;
       padding: 16px;
       box-sizing: border-box;
-    }
-  
-    /* BEFORE - 왼쪽 말풍선 사이 간격 */ 
-    .scene-globe.is-comparing
-    .sar-photo-panel:first-child {
-      /* 수정된 부분: keep a bounded central gap regardless of screen width. */
-      left: auto;
-      right: calc(50% + clamp(70px, 8vw, 120px));
-    }
-  
-    /* AFTER - 오른쪽 */
-    .scene-globe.is-comparing
-    .sar-photo-panel:last-child {
-      right: auto;
-      left: calc(50% + clamp(70px, 8vw, 120px));
     }
   
     /* 사진 크기를 일정하게 유지 */
