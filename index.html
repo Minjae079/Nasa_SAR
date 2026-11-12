@@ -9,13 +9,20 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@6.18.0/dist/maplibre-gl.css" />
   <link rel="stylesheet" href="./styles.css" />
   <link rel="stylesheet" href="./responsive.css" />
   <link rel="stylesheet" href="./compare.css" />
-  <script defer src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script defer src="https://cdn.jsdelivr.net/npm/globe.gl@2.46.1"></script>
-  <script defer src="./app.js"></script>
+  <link rel="stylesheet" href="./map.css" />
+  <!-- 수정된 부분: one globe-capable map engine replaces Globe.GL and Leaflet. -->
+  <script type="module">
+    try {
+      window.maplibregl = await import("https://unpkg.com/maplibre-gl@6.18.0/dist/maplibre-gl.mjs");
+    } catch (error) {
+      console.error("Map engine could not load", error);
+    }
+    await import("./app.js");
+  </script>
 </head>
 <body>
   <div class="site-frame">
@@ -90,18 +97,18 @@
           <button id="resetGlobe" title="Reset globe" aria-label="Reset globe">⟲</button>
         </div>
         <div class="interaction-guide"><span class="desktop-gesture-text"><span class="gesture-icon">⟳</span> DRAG TO ROTATE <span class="guide-split">/</span> SCROLL TO ZOOM <span class="guide-split">/</span> CLICK TO EXPLORE</span><span class="mobile-gesture-text"><span class="gesture-icon">⟳</span> DRAG · PINCH · TAP</span></div>
+        <div id="mapLoadStatus" class="map-load-status" role="status" hidden></div>
         <div class="globe-bottom-right"><span class="square-marker"></span> 3D WORLD VIEW <span class="guide-split">·</span> EXPERIMENTAL</div>
       </section>
 
       <section id="mapScene" class="scene scene-map" hidden aria-label="Selected location detailed map">
-        <div id="detailMap" class="detail-map" role="application" aria-label="Interactive detailed Earth map"></div>
-        <div class="map-shade"></div>
+        <!-- 수정된 부분: shared globeViz canvas remains visible behind these controls. -->
         <div class="map-toolbar">
           <button class="btn btn-dark" id="backToGlobe">← <span>Back to globe</span></button>
           <button type="button" class="btn btn-dark" id="backToComparison">← SAR Photos</button>
           <div class="map-layer-toggle" role="group" aria-label="Map basemap">
-            <button id="streetLayer" class="layer-button is-selected">Streets</button>
-            <button id="satelliteLayer" class="layer-button">Satellite</button>
+            <button id="streetLayer" class="layer-button">Streets</button>
+            <button id="satelliteLayer" class="layer-button is-selected">Satellite</button>
           </div>
         </div>
         <div class="location-card" id="locationCard">
@@ -142,7 +149,8 @@
 
       <section id="compareScene" class="scene scene-compare" hidden aria-label="NASA SAR observation comparison">
         <div class="compare-top">
-          <button type="button" class="btn btn-dark" id="compareBack">← Back to globe</button>
+          <!-- 수정된 부분: define the Close label here instead of changing it in JavaScript. -->
+          <button type="button" class="btn btn-dark" id="compareBack">&#10005; Close</button>
           <div class="compare-title">
             <span class="section-tag">NASA NISAR · L2 GCOV</span>
             <h2 id="compareRegion">Selected region</h2>

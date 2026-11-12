@@ -1,5 +1,6 @@
+// 수정된 부분: remove the unused stat import; retain both application API handlers.
 import http from 'node:http';
-import {readFile,stat} from 'node:fs/promises';
+import {readFile} from 'node:fs/promises';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {GET as getCoverage} from './api/coverage.js';

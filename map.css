@@ -1,0 +1,24 @@
+/* 수정된 부분: a persistent full-size canvas prevents renderer swaps and resize jumps. */
+#globeViz { inset: 0; opacity: 1; }
+.scene-map { background: transparent; pointer-events: none; transition: none; }
+.scene-map .map-toolbar, .scene-map .location-card { pointer-events: auto; }
+.scene-globe.is-detail .hero-content,
+.scene-globe.is-detail .scene-rail,
+.scene-globe.is-detail .planet-label,
+.scene-globe.is-detail .view-status,
+.scene-globe.is-detail .interaction-guide,
+.scene-globe.is-detail .globe-bottom-right { display: none; }
+.scene-globe.is-detail .globe-controls { z-index: 11; }
+.maplibregl-control-container .maplibregl-ctrl-bottom-right { bottom: 65px; }
+.maplibregl-ctrl-attrib { max-width: min(90vw, 560px); font-size: 10px; }
+.map-load-status {
+  position: absolute; z-index: 15; left: 16px; bottom: 90px;
+  max-width: min(420px, calc(100% - 32px)); padding: 8px 12px;
+  color: #efcfaa; background: #12252c; border: 1px solid #876b43;
+  border-radius: 8px; font-size: 12px; pointer-events: none;
+}
+.map-load-status[hidden] { display: none; }
+@media (max-width: 800px) {
+  .maplibregl-control-container .maplibregl-ctrl-bottom-right { bottom: 56px; }
+  .scene-globe.is-detail .globe-controls { bottom: 70px; right: 14px; }
+}

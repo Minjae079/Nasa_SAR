@@ -1,483 +1,191 @@
-/* SARSCOPE learning prototype. No actual SAR measurements are implied by the basemap. */
+/* SARSCOPE: basemaps are geographic context, not SAR measurements. */
 (() => {
   "use strict";
-
-  const IIT = Object.freeze({
-    lat: 41.83531,
-    lng: -87.627,
-    name: "Illinois Tech",
-  });
-  const START = Object.freeze({ lat: 34, lng: -86, altitude: 2.1 });
-  const $ = (id) => document.getElementById(id);
+  const IIT = Object.freeze({ lat: 41.83531, lng: -87.627, name: "Illinois Tech" });
+  const START = { center: [-86, 34], zoom: 0.5, bearing: 0, pitch: 0 };
+  const DETAIL_ZOOM = 6;
+  const PHOTO_ZOOM = 2.5;
+  const $ = id => document.getElementById(id);
   const globeScene = $("globeScene");
   const mapScene = $("mapScene");
   const compareScene = $("compareScene");
   const fallback = $("globeFallback");
-  let globe;
   let map;
   let marker;
-  let focusRing;
-  let streetsLayer;
-  let satelliteLayer;
-  let beforeOverlay;
-  let afterOverlay;
-  let hasSARLayers = false;
-  let activeBasemap = "streets";
   let mode = "globe";
   let currentTarget = { ...IIT };
-  let flyTimer = 0;
-  let stopped = false;
   let comparisonRequestId = 0;
   let comparisonPairs = [];
   let lastComparedPoint = null;
+  let activeBasemap = "satellite";
+  let rasterConfig = null;
+  let selectedLocation = false;
+  let cameraDestination = null;
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
   const mobileLayout = window.matchMedia("(max-width: 800px)");
 
-  /* SARSCOPE Camera Animation Settings */
-
-  const CAMERA = {
-    photo: 0.8, // SAR 사진 화면: 약간 확대
-    map: 0.5, // 상세 지도 진입 전: 크게 확대
-    photoTime: 1200, // 홈 → SAR (1.2초)
-    mapTime: 1000, // SAR → 지도 (1초)
-    returnTime: 1100, // 되돌아올 때 (1.1초)
-  };
-
-  let viewTimer = 0;
-  let viewToken = 0;
-
-  // 이전 화면 전환 애니메이션 취소
-  function resetViewMotion() {
-    clearTimeout(flyTimer);
-    clearTimeout(viewTimer);
-
-    viewToken++;
-
-    mapScene.classList.remove("is-view-entering", "is-view-leaving");
-
-    globeScene.classList.remove("is-map-zooming", "is-heading-home");
-
-    return viewToken;
+  // 수정된 부분: a single MapLibre canvas renders the globe and local map.
+  function initGlobe() {
+    if (typeof maplibregl === "undefined") { fallback.hidden = false; return; }
+    try {
+      map = new maplibregl.Map({
+        container: "globeViz", ...START, minZoom: 0, maxZoom: 19,
+        attributionControl: { compact: true },
+        style: {
+          version: 8, projection: { type: "globe" },
+          sources: {
+            satellite: { type: "raster", tileSize: 256, maxzoom: 19,
+              tiles: ["https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"],
+              attribution: "Imagery &copy; Esri and its imagery contributors" },
+            streets: { type: "raster", tileSize: 256, maxzoom: 19,
+              tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
+              attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors' }
+          },
+          layers: [
+            { id: "satellite", type: "raster", source: "satellite" },
+            { id: "streets", type: "raster", source: "streets", layout: { visibility: "none" } }
+          ],
+          sky: { "atmosphere-blend": ["interpolate", ["linear"], ["zoom"], 0, 1, 5, 1, 7, 0] }
+        }
+      });
+      map.getCanvas().setAttribute("aria-label", "Earth map: drag, scroll or pinch to zoom continuously from globe to streets");
+      // No second renderer, tile cache reset, delayed swap or click is needed.
+      map.on("zoom", syncZoomMode);
+      map.on("movestart", event => {
+        if (event.originalEvent) {
+          cameraDestination = null;
+          selectedLocation = false;
+        }
+      });
+      map.on("dragstart", () => { selectedLocation = false; });
+      map.on("moveend", () => {
+        cameraDestination = null;
+        syncZoomMode();
+        if (mode === "map") updateLocationFromCenter();
+      });
+      map.on("click", event => {
+        const { lat, lng } = event.lngLat;
+        if (mode === "map") {
+          currentTarget = { lat, lng, name: isNearIIT(lat, lng) ? IIT.name : "Selected location" };
+          selectedLocation = true;
+          updateLocationPanel();
+        } else flyTo(lat, lng);
+      });
+      map.on("load", () => {
+        marker = new maplibregl.Marker({ color: "#d5fa79" })
+          .setLngLat([currentTarget.lng, currentTarget.lat]).addTo(map);
+        applyBasemap();
+        installRasterLayers();
+      });
+      map.on("error", event => {
+        console.error("Map resource unavailable", event.error);
+        $("mapLoadStatus").hidden = false;
+        $("mapLoadStatus").textContent = "Some map tiles could not load. Check your connection and try zooming again.";
+      });
+      map.on("idle", () => { $("mapLoadStatus").hidden = true; });
+      window.addEventListener("resize", resizeGlobe);
+    } catch (error) {
+      console.error("Unable to create Earth map", error);
+      fallback.hidden = false;
+    }
   }
-
+  function resizeGlobe() { if (map) map.resize(); }
+  function coordLabel(lat, lng) {
+    return Math.abs(lat).toFixed(5) + "° " + (lat >= 0 ? "N" : "S") + " · " + Math.abs(lng).toFixed(5) + "° " + (lng >= 0 ? "E" : "W");
+  }
+  function isNearIIT(lat, lng) { return Math.abs(lat - IIT.lat) < 0.1 && Math.abs(lng - IIT.lng) < 0.14; }
   function setLocationPanelExpanded(expanded) {
     $("locationCard").classList.toggle("is-collapsed", !expanded);
     $("toggleLocationPanel").setAttribute("aria-expanded", String(expanded));
-    $("panelToggleText").textContent = expanded
-      ? "Hide location details"
-      : "Show location details";
+    $("panelToggleText").textContent = expanded ? "Hide location details" : "Show location details";
   }
-
-  function coordLabel(lat, lng) {
-    return `${Math.abs(lat).toFixed(5)}° ${lat >= 0 ? "N" : "S"} · ${Math.abs(
-      lng
-    ).toFixed(5)}° ${lng >= 0 ? "E" : "W"}`;
-  }
-  function isNearIIT(lat, lng) {
-    return Math.abs(lat - IIT.lat) < 0.1 && Math.abs(lng - IIT.lng) < 0.14;
-  }
-  function stopRotation() {
-    if (globe) globe.controls().autoRotate = false;
-    stopped = true;
-  }
-  function initGlobe() {
-    if (typeof Globe !== "function") {
-      fallback.hidden = false;
-      return;
-    }
-    try {
-      globe = Globe({ animateIn: false })($("globeViz"))
-        .globeImageUrl(
-          "https://cdn.jsdelivr.net/npm/three-globe/example/img/earth-blue-marble.jpg"
-        )
-        .bumpImageUrl(
-          "https://cdn.jsdelivr.net/npm/three-globe/example/img/earth-topology.png"
-        )
-        .backgroundColor("rgba(0,0,0,0)")
-        .showAtmosphere(true)
-        .atmosphereColor("#72d1ca")
-        .atmosphereAltitude(0.15)
-        .pointsData([{ ...IIT, name: "Illinois Tech · Chicago" }])
-        .pointLat("lat")
-        .pointLng("lng")
-        .pointLabel("name")
-        .pointRadius(0.42)
-        .pointAltitude(0.018)
-        .pointColor(() => "#d5fa79")
-        .pointsTransitionDuration(0)
-        .onPointClick(() => flyTo(IIT.lat, IIT.lng, "Illinois Tech"))
-        .onGlobeClick(({ lat, lng }) => flyTo(lat, lng));
-
-      globe.controls().autoRotate = !reducedMotion.matches;
-      globe.controls().autoRotateSpeed = 0.28;
-      globe.controls().minDistance = 115;
-      globe.controls().maxDistance = 800;
-      globe.pointOfView(START, 0);
-      globe
-        .renderer()
-        .domElement.setAttribute(
-          "aria-label",
-          "3D Earth — drag to rotate, scroll to zoom, click a location"
-        );
-      globe
-        .renderer()
-        .domElement.addEventListener("pointerdown", stopRotation, {
-          passive: true,
-        });
-      resizeGlobe();
-      window.addEventListener("resize", resizeGlobe);
-      window.addEventListener("orientationchange", () =>
-        window.setTimeout(resizeGlobe, 120)
-      );
-      if (window.ResizeObserver) {
-        const observer = new ResizeObserver(() => resizeGlobe());
-        observer.observe($("globeViz"));
-      }
-    } catch (error) {
-      console.error("Unable to create WebGL globe", error);
-      fallback.hidden = false;
-    }
-  }
-  function resizeGlobe() {
-    if (!globe) return;
-    const rect = $("globeViz").getBoundingClientRect();
-    if (rect.width < 4 || rect.height < 4) return;
-    globe.width(Math.round(rect.width)).height(Math.round(rect.height));
-  }
-  function globeZoom(direction) {
-    if (!globe) return;
-    clearTimeout(flyTimer);
-    stopRotation();
-    const p = globe.pointOfView();
-    const nextAlt = Math.max(
-      0.17,
-      Math.min(3.6, p.altitude * (direction === "in" ? 0.66 : 1.52))
-    );
-    globe.pointOfView({ altitude: nextAlt }, 500);
-  }
-
-  function flyTo(lat, lng, name) {
-    const token = resetViewMotion();
-
-    if (!globe) {
-      openComparison(lat, lng);
-      return;
-    }
-
-    stopRotation();
-
-    currentTarget = {
-      lat,
-      lng,
-      name:
-        name || (isNearIIT(lat, lng) ? "Illinois Tech" : "Selected location"),
-    };
-
-    const duration = reducedMotion.matches ? 0 : CAMERA.photoTime;
-
-    // 선택한 위치로 회전 + 약한 줌인
-    globe.pointOfView(
-      {
-        lat,
-        lng,
-        altitude: CAMERA.photo,
-      },
-      duration
-    );
-
-    // 카메라 이동이 끝난 후 SAR 말풍선 표시
-    flyTimer = window.setTimeout(() => {
-      if (token !== viewToken) return;
-
-      openComparison(lat, lng);
-    }, duration + 50);
-  }
-
-  function goHome() {
-    const token = resetViewMotion();
-
-    const wasInMap = !mapScene.hidden;
-
-    mode = "return-home";
-    comparisonRequestId++;
-
-    globeScene.hidden = false;
-    resizeGlobe();
-
-    if (wasInMap) {
-      // 지도 화면에서 홈으로 나올 때
-      compareScene.hidden = true;
-      mapScene.classList.add("is-view-leaving");
-
-      if (globe) {
-        globe.pointOfView(
-          {
-            lat: currentTarget.lat,
-            lng: currentTarget.lng,
-            altitude: CAMERA.map,
-          },
-          0
-        );
-      }
-    } else {
-      // SAR 사진 창을 서서히 숨김
-      globeScene.classList.add("is-heading-home");
-    }
-
-    const duration = reducedMotion.matches ? 0 : CAMERA.returnTime;
-
-    // 기본 지구본 크기로 복귀
-    if (globe) {
-      requestAnimationFrame(() => {
-        if (token !== viewToken) return;
-        globe.pointOfView(START, duration);
-      });
-    }
-
-    viewTimer = window.setTimeout(() => {
-      if (token !== viewToken) return;
-
-      mapScene.hidden = true;
-      compareScene.hidden = true;
-
-      mapScene.classList.remove("is-view-leaving");
-
-      globeScene.classList.remove(
-        "is-comparing",
-        "is-heading-home",
-        "is-map-zooming"
-      );
-
-      if (map) map.closePopup();
-
-      mode = "globe";
-      $("navExplore").classList.add("is-active");
-    }, duration + 50);
-  }
-
-  function closeComparison() {
-    clearTimeout(flyTimer);
-
-    // 이전 API 요청 무효화
-    comparisonRequestId++;
-
-    // 비교 패널 숨기기
-    compareScene.hidden = true;
-
-    // 일반 지구본 화면으로 돌아가기
-    globeScene.classList.remove("is-comparing");
-    globeScene.hidden = false;
-
-    mode = "globe";
-    resizeGlobe();
-  }
-  function initMap() {
-    if (map || typeof L === "undefined") return Boolean(map);
-    map = L.map("detailMap", {
-      zoomControl: true,
-      scrollWheelZoom: true,
-      preferCanvas: true,
-    });
-    streetsLayer = L.tileLayer(
-      "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-      {
-        attribution:
-          '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a> contributors',
-        maxZoom: 19,
-      }
-    );
-    satelliteLayer = L.tileLayer(
-      "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
-      {
-        attribution: "Imagery &copy; Esri and its imagery contributors",
-        maxZoom: 19,
-      }
-    );
-    streetsLayer.addTo(map);
-    map.setView([IIT.lat, IIT.lng], 13);
-    marker = L.circleMarker([IIT.lat, IIT.lng], {
-      radius: 7,
-      color: "#d5fa79",
-      weight: 3,
-      fillColor: "#14232a",
-      fillOpacity: 0.9,
-    }).addTo(map);
-    focusRing = L.circle([IIT.lat, IIT.lng], {
-      radius: 600,
-      color: "#c9fa86",
-      weight: 1.7,
-      dashArray: "6 6",
-      fillColor: "#9ac7a4",
-      fillOpacity: 0.07,
-    }).addTo(map);
-    return true;
-  }
-
-  function showComparisonFromMap() {
-    const token = resetViewMotion();
-
+  function updateLocationPanel() {
     const { lat, lng } = currentTarget;
-
-    // 기존 SAR 이미지 재사용 가능 여부
-    const sameLocation =
-      typeof lastComparedPoint !== "undefined" &&
-      lastComparedPoint !== null &&
-      Math.abs(lastComparedPoint.lat - lat) < 0.000001 &&
-      Math.abs(lastComparedPoint.lng - lng) < 0.000001;
-
-    const reuseImages = sameLocation && comparisonPairs.length > 0;
-
-    mode = "compare";
-
-    // 지구본 + SAR 패널 다시 표시
-    globeScene.hidden = false;
-    globeScene.classList.add("is-comparing");
-    compareScene.hidden = false;
-
-    resizeGlobe();
-
-    if (globe) {
-      stopRotation();
-
-      // 지구본을 확대된 상태에 위치시킴
-      globe.pointOfView({ lat, lng, altitude: CAMERA.map }, 0);
-
-      // 다시 SAR 사진 화면 크기로 줌아웃
-      requestAnimationFrame(() => {
-        if (token !== viewToken) return;
-
-        globe.pointOfView(
-          { lat, lng, altitude: CAMERA.photo },
-          reducedMotion.matches ? 0 : CAMERA.returnTime
-        );
-      });
-    }
-
-    // 기존 지도를 서서히 투명하게
-    mapScene.classList.add("is-view-leaving");
-
-    if (!reuseImages) {
-      $("sarCompareGrid").hidden = true;
-    }
-
-    viewTimer = window.setTimeout(
-      () => {
-        if (token !== viewToken) return;
-
-        mapScene.hidden = true;
-        mapScene.classList.remove("is-view-leaving");
-
-        // 같은 지역이면 기존 사진 유지
-        if (reuseImages) return;
-
-        // 지역이 변경되었다면 데이터 다시 검색
-        openComparison(lat, lng);
-      },
-      reducedMotion.matches ? 0 : 650
-    );
-  }
-
-  function openMap(lat, lng) {
-    const token = resetViewMotion();
-
-    mode = "transition-map";
-
-    const duration = reducedMotion.matches ? 0 : CAMERA.mapTime;
-
-    // 3D 지구본에서 깊은 줌인 시작
-    globeScene.classList.add("is-map-zooming");
-
-    if (globe) {
-      stopRotation();
-
-      globe.pointOfView(
-        {
-          lat,
-          lng,
-          altitude: CAMERA.map,
-        },
-        duration
-      );
-    }
-
-    // 확대 완료 후 Leaflet 지도로 전환
-    viewTimer = window.setTimeout(() => {
-      if (token !== viewToken) return;
-
-      // 지도 페이드인 준비
-      mapScene.classList.add("is-view-entering");
-
-      // 기존 지도 기능 실행
-      openMapNow(lat, lng);
-
-      // 지구본은 지도 뒤에 유지
-      globeScene.hidden = false;
-
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          if (token !== viewToken) return;
-
-          mapScene.classList.remove("is-view-entering");
-          globeScene.classList.remove("is-map-zooming");
-        });
-      });
-    }, duration + 40);
-  }
-
-  function openMapNow(lat, lng) {
-    clearTimeout(flyTimer);
-    mode = "map";
-    currentTarget = {
-      lat,
-      lng,
-      name: isNearIIT(lat, lng) ? "Illinois Tech" : "Selected location",
-    };
-    globeScene.hidden = false;
-    compareScene.hidden = true;
-    mapScene.hidden = false;
     $("selectedPlace").textContent = currentTarget.name;
     $("selectedCoords").textContent = coordLabel(lat, lng);
     const near = isNearIIT(lat, lng);
-    if (mobileLayout.matches) setLocationPanelExpanded(true);
     $("iitDataPanel").hidden = !near;
     $("outsideDataPanel").hidden = near;
-    if (!initMap()) {
-      $("selectedPlace").textContent = "Map library unavailable";
-      $("selectedCoords").textContent =
-        "Connect to the internet to load the detailed map.";
-      return;
+    if (marker) marker.setLngLat([lng, lat]);
+    refreshRasterLayers(mode === "map" && near);
+  }
+  function updateLocationFromCenter() {
+    if (selectedLocation) return;
+    const { lat, lng } = map.getCenter();
+    currentTarget = { lat, lng, name: isNearIIT(lat, lng) ? IIT.name : "Map center" };
+    updateLocationPanel();
+  }
+  // 수정된 부분: zoom changes only UI overlays; the underlying map stays mounted.
+  function syncZoomMode() {
+    if (!map || (cameraDestination !== null && cameraDestination < DETAIL_ZOOM)) return;
+    if (map.getZoom() >= DETAIL_ZOOM && mode !== "map") {
+      comparisonRequestId++;
+      mode = "map";
+      compareScene.hidden = true;
+      globeScene.classList.remove("is-comparing");
+      globeScene.classList.add("is-detail");
+      mapScene.hidden = false;
+      if (mobileLayout.matches) setLocationPanelExpanded(true);
+      updateLocationFromCenter();
+      updateLocationPanel();
+    } else if (map.getZoom() < DETAIL_ZOOM - 0.5 && mode === "map") {
+      mode = "globe";
+      mapScene.hidden = true;
+      globeScene.classList.remove("is-detail");
+      refreshRasterLayers(false);
     }
-    marker.setLatLng([lat, lng]);
-    marker.bindPopup(`Selected location<br>${coordLabel(lat, lng)}`);
-    if (near) {
-      focusRing.setLatLng([IIT.lat, IIT.lng]);
-      if (!map.hasLayer(focusRing)) focusRing.addTo(map);
-    } else if (map.hasLayer(focusRing)) {
-      map.removeLayer(focusRing);
-    }
-
-    requestAnimationFrame(() => {
-      map.invalidateSize();
-
-      const targetZoom = near ? 15 : 12;
-
-      // 먼저 넓은 지역에서 시작
-      map.setView([lat, lng], reducedMotion.matches ? targetZoom : 9, {
-        animate: false,
-      });
-
-      // 해당 지역까지 부드럽게 확대
-      if (!reducedMotion.matches) {
-        requestAnimationFrame(() => {
-          map.flyTo([lat, lng], targetZoom, {
-            animate: true,
-            duration: 1.25,
-          });
-        });
-      }
-    });
-
-    refreshRasterLayers(near);
+  }
+  function globeZoom(direction) {
+    cameraDestination = null;
+    if (map) map.zoomTo(map.getZoom() + (direction === "in" ? 1 : -1), { duration: reducedMotion.matches ? 0 : 250 });
+  }
+  function flyTo(lat, lng) {
+    cameraDestination = PHOTO_ZOOM;
+    selectedLocation = true;
+    // 수정된 부분: search starts immediately, independently of camera animation.
+    openComparison(lat, lng);
+    if (map) map.flyTo({ center: [lng, lat], zoom: PHOTO_ZOOM, duration: reducedMotion.matches ? 0 : 1000 });
+  }
+  function goHome() {
+    cameraDestination = START.zoom;
+    comparisonRequestId++;
+    mode = "globe";
+    selectedLocation = false;
+    globeScene.hidden = false;
+    globeScene.classList.remove("is-comparing", "is-detail");
+    compareScene.hidden = true;
+    mapScene.hidden = true;
+    refreshRasterLayers(false);
+    if (map) map.flyTo({ ...START, duration: reducedMotion.matches ? 0 : 1000 });
+  }
+  function showComparisonFromMap() {
+    cameraDestination = PHOTO_ZOOM;
+    const { lat, lng } = currentTarget;
+    globeScene.classList.remove("is-detail");
+    mapScene.hidden = true;
+    const reuse = lastComparedPoint && Math.abs(lastComparedPoint.lat - lat) < 0.000001 &&
+      Math.abs(lastComparedPoint.lng - lng) < 0.000001 && comparisonPairs.length;
+    if (reuse) {
+      mode = "compare";
+      globeScene.classList.add("is-comparing");
+      compareScene.hidden = false;
+    } else openComparison(lat, lng);
+    refreshRasterLayers(false);
+    if (map) map.flyTo({ center: [lng, lat], zoom: PHOTO_ZOOM, duration: reducedMotion.matches ? 0 : 900 });
+  }
+  function openMap(lat, lng) {
+    cameraDestination = null;
+    if (!map) { fallback.hidden = false; return; }
+    comparisonRequestId++;
+    currentTarget = { lat, lng, name: isNearIIT(lat, lng) ? IIT.name : "Selected location" };
+    selectedLocation = true;
+    compareScene.hidden = true;
+    globeScene.classList.remove("is-comparing");
+    mode = "globe";
+    // 수정된 부분: one uninterrupted camera flight, without screen-switch timers.
+    map.flyTo({ center: [lng, lat], zoom: isNearIIT(lat, lng) ? 15 : 12, duration: reducedMotion.matches ? 0 : 1300 });
+    syncZoomMode();
+    updateLocationPanel();
   }
   function updateComparisonStatus(message, kind = "info") {
     const node = $("compareStatus");
@@ -494,74 +202,7 @@
     });
   }
 
-  function extractImageUrl(input) {
-    try {
-      // Preview API URL 또는 NASA 원본 URL 처리
-      const parsed = new URL(input, window.location.origin);
-
-      // ?url= 파라미터가 있으면 실제 이미지 URL 추출
-      const rawUrl = parsed.searchParams.get("url") || parsed.href;
-
-      const imageUrl = new URL(rawUrl);
-
-      // NASA ASF 이미지 URL만 허용
-      if (
-        imageUrl.protocol !== "https:" ||
-        imageUrl.hostname !== "nisar.asf.earthdatacloud.nasa.gov"
-      ) {
-        throw new Error("Invalid NASA image URL");
-      }
-
-      // 첫 이미지 확장자 뒤에 중복된 경로 제거
-      const match = imageUrl.pathname.match(/\.(?:png|jpg|jpeg|webp)(?=\/|$)/i);
-
-      if (!match) {
-        throw new Error("Image extension not found");
-      }
-
-      imageUrl.pathname = imageUrl.pathname.slice(
-        0,
-        match.index + match[0].length
-      );
-
-      imageUrl.search = "";
-      imageUrl.hash = "";
-
-      return imageUrl.href;
-    } catch (error) {
-      console.error("Image URL extraction error:", error);
-      return null;
-    }
-  }
-
-  function extractImageUrl(input) {
-    // /api/preview?url=... 에서 원본 URL 추출
-    const parsed = new URL(input, window.location.origin);
-    const rawUrl = parsed.searchParams.get("url") || parsed.href;
-
-    const imageUrl = new URL(rawUrl);
-
-    // NASA 이미지 주소 확인
-    if (
-      imageUrl.protocol !== "https:" ||
-      imageUrl.hostname !== "nisar.asf.earthdatacloud.nasa.gov"
-    ) {
-      throw new Error("Invalid NASA image URL");
-    }
-
-    // 이미지 확장자 뒤에 중복 경로가 붙은 경우 제거
-    const match = imageUrl.pathname.match(/\.(png|jpg|jpeg|webp)(?=\/|$)/i);
-
-    if (match) {
-      imageUrl.pathname = imageUrl.pathname.slice(
-        0,
-        match.index + match[0].length
-      );
-    }
-
-    return imageUrl.href;
-  }
-
+  // 수정된 부분: duplicate URL parsers and debug logs removed; use the validated server proxy.
   function setImage(elementId, errorId, url) {
     const image = $(elementId);
     const error = $(errorId);
@@ -580,19 +221,8 @@
       console.error("Image loading failed:", image.src);
     };
 
-    try {
-      const actualUrl = extractImageUrl(url);
-
-      console.log("Original URL:", url);
-      console.log("Extracted URL:", actualUrl);
-
-      // NASA 이미지를 직접 표시
-      image.src = actualUrl;
-    } catch (err) {
-      console.error(err);
-      image.hidden = true;
-      error.hidden = false;
-    }
+    // The server validates NASA URLs and handles authentication and fallbacks.
+    image.src = `/api/preview?url=${encodeURIComponent(url)}`;
   }
 
   function renderPair(pair) {
@@ -613,9 +243,10 @@
     }
   }
 
+  // 수정된 부분: clear stale results before searching and save the location only on success.
   async function openComparison(lat, lng) {
-    clearTimeout(flyTimer);
-    lastComparedPoint = { lat, lng };
+    lastComparedPoint = null;
+    comparisonPairs = [];
     const requestId = ++comparisonRequestId;
     mode = "compare";
     currentTarget = {
@@ -626,7 +257,9 @@
         : "Selected Earth region",
     };
     globeScene.hidden = false;
+    globeScene.classList.remove("is-detail");
     globeScene.classList.add("is-comparing");
+    refreshRasterLayers(false);
     mapScene.hidden = true;
     compareScene.hidden = false;
     $("compareRegion").textContent = currentTarget.name;
@@ -660,6 +293,8 @@
         );
         return;
       }
+      // 수정된 부분: mark this location reusable only after matching observations are available.
+      lastComparedPoint = { lat, lng };
       const chooser = $("pairSelect");
       chooser.replaceChildren();
       comparisonPairs.forEach((p, i) => {
@@ -686,87 +321,59 @@
       updateComparisonStatus(`Unable to search: ${error.message}`, "error");
     }
   }
+  // 수정된 부분: switch layers on the same style; preserve projection and tile cache.
   function setBasemap(name) {
-    if (!map || name === activeBasemap) return;
-    if (name === "satellite") {
-      if (map.hasLayer(streetsLayer)) map.removeLayer(streetsLayer);
-      satelliteLayer.addTo(map);
-    } else {
-      if (map.hasLayer(satelliteLayer)) map.removeLayer(satelliteLayer);
-      streetsLayer.addTo(map);
-    }
+    if (!["streets", "satellite"].includes(name)) return;
     activeBasemap = name;
-    refreshRasterLayers(
-      mode === "map" && isNearIIT(currentTarget.lat, currentTarget.lng)
-    );
-    if (beforeOverlay && map.hasLayer(beforeOverlay))
-      beforeOverlay.bringToFront();
-    if (afterOverlay && map.hasLayer(afterOverlay)) afterOverlay.bringToFront();
-    $("streetLayer").classList.toggle("is-selected", name === "streets");
-    $("satelliteLayer").classList.toggle("is-selected", name === "satellite");
+    applyBasemap();
   }
-
-  // SAR raster overlays are opt-in and NOT simulated. Only validated, real imagery
-  // may be placed in data/sar_layers.json. A missing file is an expected state.
+  function applyBasemap() {
+    if (!map || !map.getLayer("streets")) return;
+    map.setLayoutProperty("streets", "visibility", activeBasemap === "streets" ? "visible" : "none");
+    $("streetLayer").classList.toggle("is-selected", activeBasemap === "streets");
+    $("satelliteLayer").classList.toggle("is-selected", activeBasemap === "satellite");
+  }
+  // 수정된 부분: optional prepared SAR images use MapLibre image sources.
   async function tryLoadSarLayers() {
     try {
-      const result = await fetch("./data/sar_layers.json", {
-        cache: "no-store",
-      });
-      if (!result.ok) return;
-      const config = await result.json();
+      const response = await fetch("./data/sar_layers.json", { cache: "no-store" });
+      if (!response.ok) return;
+      const config = await response.json();
       const bounds = config.bounds;
-      if (
-        !config.before_image ||
-        !config.after_image ||
-        !Array.isArray(bounds) ||
-        bounds.length !== 2
-      )
-        return;
-      if (typeof L === "undefined" || !initMap()) return;
-      beforeOverlay = L.imageOverlay(config.before_image, bounds, {
-        opacity: 0.78,
-        interactive: false,
-      });
-      afterOverlay = L.imageOverlay(config.after_image, bounds, {
-        opacity: 0.4,
-        interactive: false,
-      });
-      hasSARLayers = true;
-      $("comparisonControls").hidden = false;
-      $("rasterStatus").textContent = `${config.before_date || "Before"} / ${
-        config.after_date || "After"
-      }`;
-      const badge = document.querySelector(".data-status");
-      badge.classList.add("is-ready");
-      badge.querySelector("span:last-child").textContent =
-        "Prepared raster overlay loaded — review quality";
-      badge.querySelector(".data-status-icon").textContent = "✓";
-      $("compareSlider").addEventListener("input", (event) => {
-        const opacity = Number(event.target.value) / 100;
-        afterOverlay.setOpacity(opacity * 0.8);
-        $("comparePct").textContent = `${Math.round(opacity * 100)}% after`;
-      });
-      refreshRasterLayers(
-        mode === "map" && isNearIIT(currentTarget.lat, currentTarget.lng)
-      );
-    } catch (error) {
-      // A missing data/sar_layers.json is completely normal for this demo.
-      console.debug(
-        "No optional SAR layers configured:",
-        error?.message || error
-      );
-    }
+      if (!config.before_image || !config.after_image || !Array.isArray(bounds) || bounds.length !== 2 ||
+          !bounds.every(p => Array.isArray(p) && p.length === 2 && p.every(Number.isFinite))) return;
+      const [[south, west], [north, east]] = bounds;
+      if (south >= north || west >= east || south < -90 || north > 90 || west < -180 || east > 180) return;
+      rasterConfig = config;
+      installRasterLayers();
+    } catch (error) { console.debug("Optional SAR layers unavailable", error); }
   }
-  function refreshRasterLayers(shouldShow) {
-    if (!map || !hasSARLayers) return;
-    for (const layer of [beforeOverlay, afterOverlay]) {
-      if (shouldShow && !map.hasLayer(layer)) layer.addTo(map);
-      if (!shouldShow && map.hasLayer(layer)) map.removeLayer(layer);
+  function installRasterLayers() {
+    if (!rasterConfig || !map || !map.isStyleLoaded() || map.getSource("sar-before")) return;
+    const [[south, west], [north, east]] = rasterConfig.bounds;
+    const coordinates = [[west, north], [east, north], [east, south], [west, south]];
+    for (const time of ["before", "after"]) {
+      map.addSource("sar-" + time, { type: "image", url: rasterConfig[time + "_image"], coordinates });
+      map.addLayer({ id: "sar-" + time, type: "raster", source: "sar-" + time,
+        layout: { visibility: "none" }, paint: { "raster-opacity": time === "before" ? 0.78 : 0.4 } });
     }
-    if (shouldShow) {
-      marker.bringToFront();
-      if (map.hasLayer(focusRing)) focusRing.bringToFront();
+    $("comparisonControls").hidden = false;
+    $("rasterStatus").textContent = (rasterConfig.before_date || "Before") + " / " + (rasterConfig.after_date || "After");
+    const badge = document.querySelector(".data-status");
+    badge.classList.add("is-ready");
+    badge.querySelector("span:last-child").textContent = "Prepared raster overlay loaded - review quality";
+    badge.querySelector(".data-status-icon").textContent = "OK";
+    $("compareSlider").addEventListener("input", event => {
+      const opacity = Number(event.target.value) / 100;
+      map.setPaintProperty("sar-after", "raster-opacity", opacity * 0.8);
+      $("comparePct").textContent = Math.round(opacity * 100) + "% after";
+    });
+    refreshRasterLayers(mode === "map" && isNearIIT(currentTarget.lat, currentTarget.lng));
+  }
+  function refreshRasterLayers(show) {
+    if (!map) return;
+    for (const id of ["sar-before", "sar-after"]) {
+      if (map.getLayer(id)) map.setLayoutProperty(id, "visibility", show ? "visible" : "none");
     }
   }
   function toggleModal(visible) {
@@ -810,11 +417,7 @@
       openMap(IIT.lat, IIT.lng)
     );
     $("backToGlobe").addEventListener("click", goHome);
-    $("resetGlobe").addEventListener("click", () => {
-      clearTimeout(flyTimer);
-      if (!globe) return;
-      globe.pointOfView(START, 1000);
-    });
+    $("resetGlobe").addEventListener("click", goHome);
     $("zoomInGlobe").addEventListener("click", () => globeZoom("in"));
     $("zoomOutGlobe").addEventListener("click", () => globeZoom("out"));
     $("streetLayer").addEventListener("click", () => setBasemap("streets"));
@@ -822,17 +425,15 @@
       setBasemap("satellite")
     );
   }
+  // 수정된 부분: the Close label now lives in HTML instead of being overwritten at startup.
   function start() {
     // 기존 비교 화면을 지구본 내부로 이동
     globeScene.appendChild(compareScene);
 
-    // 닫기 버튼 이름 변경
-    $("compareBack").textContent = "✕ Close";
-
     bindControls();
     initGlobe();
     // No API keys, SAR claims or mock detection results are embedded in the demo.
-    // Delay optional config fetch to ensure Leaflet has been initialized from CDN.
+    // Prepared overlays attach to the shared map after its style loads.
     tryLoadSarLayers();
   }
   if (document.readyState === "loading") {

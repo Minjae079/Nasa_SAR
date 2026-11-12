@@ -4,7 +4,7 @@ A mobile-responsive 3D Earth explorer that uses **real NASA/ASF observation meta
 
 ## What it does
 
-- Globe.GL Earth can be dragged, zoomed, tapped or clicked.
+- MapLibre GL JS Earth can be dragged, zoomed, tapped or clicked.
 - Clicking a location calls `/api/coverage` (server-side). It queries the ASF SearchAPI for NISAR GCOV scenes intersecting that point, merges results with the included **2026-11-03 IIT catalog** when relevant, and groups matching observations by track, frame, direction, polarization and processing version (CRID).
 - Chooses the latest two distinct acquisition dates *within a matching group*, not simply the two latest unrelated satellite products.
 - Offers a dropdown for different matching tracks; displays two NASA ASF browse PNG previews side by side with dates, source links, and error handling.
@@ -22,7 +22,7 @@ A mobile-responsive 3D Earth explorer that uses **real NASA/ASF observation meta
 
 ## Run locally in VS Code
 
-Requirements: **Node.js 22+** and internet access for Globe.GL, map tiles and NASA live requests.
+Requirements: **Node.js 22+** and internet access for MapLibre GL JS, map tiles and NASA live requests.
 
 ```bash
 cd SARSCOPE_NISAR_Compare_Vercel
@@ -46,7 +46,7 @@ Open **http://localhost:3000**. Press **Explore Illinois Tech** to see the first
 
 - `index.html`, `styles.css`, `responsive.css`, `compare.css`, `app.js` — static web frontend.
 - `api/coverage.js` — local + live ASF scene lookup and matching.
-- `api/preview.js` — domain-restricted PNG proxy with 24 MB response limit.
+- `api/preview.js` — domain-restricted PNG proxy with 4 MB response limit.
 - `lib/sarCatalog.js` — footprint containment and time-pair matching.
 - `api/data/iit_catalog.json` — sanitized metadata and browse links from supplied ASF GeoJSON; 185 unique products, 32 GCOV.
 - `dev-server.mjs` — simple local HTTP server using the same backend handlers.
@@ -55,3 +55,21 @@ Open **http://localhost:3000**. Press **Explore Illinois Tech** to see the first
 ## Scientific next steps
 
 To show actual *the same pixels* of the clicked location in each time period, create AOI-cropped, georeferenced GCOV backscatter rasters (from HDF5 via GDAL), align grids, mask invalid data, convert to comparable contrast-stretched PNGs, and serve those via object storage. Perform quantitative change detection and SAR calibration checks **before** reporting surface changes. This is distinct from browsing full-scene preview images.
+
+<!-- 수정된 부분: document the relocated diagnostic tool and unified image loading. -->
+## Development diagnostics
+
+Run `node tools/diagnose-preview.mjs` (thumbnail) or `node tools/diagnose-preview.mjs full` to inspect NASA image access. This developer tool is not a deployed API route. Comparison images use `/api/preview` for server-side authentication and fallback handling.
+
+The optional `data/sar_layers.example.json` describes prepared raster overlays. The app checks for `data/sar_layers.json` at startup; a missing configuration is expected until real rasters are prepared.
+
+<!-- 수정된 부분: package.json uses node --test for Windows-compatible test discovery; JSON does not support comments. The documented preview limit was corrected to 4 MB. -->
+
+## Continuous globe-to-map navigation
+
+<!-- 수정된 부분: document the shared renderer and removed transition delays. -->
+MapLibre GL JS 6.18.0 replaces Globe.GL and Leaflet. A single persistent WebGL canvas and globe projection support wheel, pinch, and +/- zoom all the way to street level. At zoom 6 the local controls appear automatically; zooming out below 5.5 restores exploration controls. No click or renderer swap is required. SAR comparison remains available by clicking the globe or using the IIT shortcut. The Map button uses one continuous camera flight. Streets/Satellite changes layer visibility without replacing the map style. Satellite imagery is the initial basemap.
+
+Tile downloads still depend on the network and imagery providers; this removes artificial transition waits, not network latency. MapLibre attribution stays visible. Optional prepared SAR overlays now use MapLibre image sources on the same canvas; they remain disabled without a valid configuration.
+
+Reference: https://maplibre.org/maplibre-gl-js/docs/examples/display-a-globe-with-an-atmosphere/

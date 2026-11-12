@@ -6,7 +6,7 @@
   "description": "Interactive NASA NISAR browse preview explorer; no raw SAR processing",
   "scripts": {
     "dev": "node dev-server.mjs",
-    "test": "node --test test/*.test.mjs"
+    "test": "node --test"
   },
   "engines": {"node": ">=22"}
 }

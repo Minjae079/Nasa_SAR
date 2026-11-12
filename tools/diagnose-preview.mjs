@@ -1,9 +1,11 @@
+// 수정된 부분: move the temporary deployed API to a manually executed developer tool.
 // Temporary diagnostics for NASA NISAR browse imagery.
 // Safe: only tests a known IIT scene; never reports credentials.
 import { readFileSync } from "node:fs";
+import { pathToFileURL } from "node:url";
 
 const catalog = JSON.parse(
-  readFileSync(new URL("./data/iit_catalog.json", import.meta.url), "utf8")
+  readFileSync(new URL("../api/data/iit_catalog.json", import.meta.url), "utf8")
 );
 
 const SCENE_DATE = "2026-10-22";
@@ -87,4 +89,12 @@ export async function GET(request) {
       tokenConfigured: Boolean(process.env.EARTHDATA_TOKEN),
     });
   }
+}
+
+// 수정된 부분: CLI entry point with full/thumbnail selection.
+// Run manually: node tools/diagnose-preview.mjs [full|thumbnail]
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  const kind = process.argv[2] === "full" ? "full" : "thumbnail";
+  const response = await GET(new Request(`http://localhost/diagnose?kind=${kind}`));
+  console.log(JSON.stringify(await response.json(), null, 2));
 }

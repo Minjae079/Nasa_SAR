@@ -1,5 +1,6 @@
 /* Real NASA ASF browse preview comparison UI. Responsive and self-contained. */
-.scene-compare{display:flex; flex-direction:column; gap:18px; min-height:calc(100dvh - 125px); padding:26px clamp(18px,3vw,56px) 28px; overflow:auto; background:radial-gradient(ellipse at 50% 8%,#152c36 0%,#08141d 52%,#071017 100%); color:#f0f6f3}
+/* 수정된 부분: remove obsolete full-screen layout overrides; retain the floating comparison UI. */
+.scene-compare{gap:18px;color:#f0f6f3}
 .scene-compare[hidden]{display:none!important}
 .compare-top{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:18px}
 .compare-top .compare-title{text-align:center}
@@ -29,7 +30,7 @@
 .compare-footer-note{color:#a1b6c0;font-size:12px;line-height:1.65;max-width:1100px}
 .compare-footer-note strong{color:#dff8da;margin-right:8px}
 @media(max-width:850px){
- .scene-compare{min-height:calc(100dvh - 96px);padding:16px 14px 30px;gap:14px}
+ .scene-compare{gap:14px}
  .compare-top{grid-template-columns:1fr auto;gap:9px}
  .compare-top .compare-title{grid-column:1/-1;grid-row:2;text-align:left;margin-top:6px}
  .compare-top .btn{font-size:12px;max-width:100%}
@@ -39,9 +40,6 @@
  .compare-chooser select{width:100%;flex:auto}
  .compare-chooser span{font-size:11px}
 }
-/* Clear the fixed site header/footer; comparison scrolls within the main viewport. */
-.scene-compare{padding-top:110px;padding-bottom:85px}
-@media(max-width:850px){.scene-compare{padding-top:82px;padding-bottom:75px}}
 /* ===========================================
    SARSCOPE - Floating SAR Speech Bubble UI
    =========================================== */
@@ -116,10 +114,6 @@
   font-size: 11px;
 }
 
-/* 비교 중에는 별도 지도 전환 버튼 숨김 */
-.scene-globe #compareMap {
-  display: none;
-}
 
 /* 날짜 비교군 선택 */
 .scene-globe .compare-chooser {
@@ -562,8 +556,9 @@
    ========================================= */
 
 /* 1. SAR 비교 화면에서 Map 버튼 다시 표시 */
+/* 수정된 부분: remove the conflicting hide rule and unnecessary !important. */
 .scene-globe.is-comparing #compareMap {
-    display: inline-flex !important;
+    display: inline-flex;
   
     position: absolute;
     top: 12px;
@@ -668,44 +663,4 @@
   }
   
 
-/* =========================================
-   SARSCOPE - Smooth Camera Transitions
-   ========================================= */
-
-/* 상세 지도 페이드 효과 */
-.scene-map {
-  opacity: 1;
-  transition: opacity 650ms ease-in-out;
-}
-
-/* 지도 진입 및 이탈 애니메이션 */
-.scene-map.is-view-entering,
-.scene-map.is-view-leaving {
-  opacity: 0;
-  pointer-events: none;
-}
-
-/* 지구본 위 SAR 패널 전환 */
-.scene-globe .scene-compare {
-  transition: opacity 350ms ease;
-}
-
-/* SAR → 지도 이동 시 말풍선 숨김 */
-.scene-globe.is-map-zooming .scene-compare {
-  opacity: 0;
-  pointer-events: none;
-}
-
-/* SAR → 홈 이동 시 말풍선 숨김 */
-.scene-globe.is-heading-home .scene-compare {
-  opacity: 0;
-  pointer-events: none;
-}
-
-/* 접근성: 애니메이션 감소 설정 */
-@media (prefers-reduced-motion: reduce) {
-  .scene-map,
-  .scene-globe .scene-compare {
-    transition: none !important;
-  }
-}
+/* 수정된 부분: removed obsolete cross-renderer fades; shared map styling is in map.css. */
