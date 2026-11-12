@@ -1,4 +1,4 @@
-// 수정된 부분: regression tests for stale results, late responses and server-proxied images.
+// 수정된 부분: regression tests for stale results, late responses and image URL extraction.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
@@ -9,12 +9,12 @@ function frontend(fetch, maplibregl) {
   const node = id => {
     if (!nodes.has(id)) nodes.set(id, {
       hidden: false, dataset: {}, classList: { add() {}, remove() {}, toggle() {} },
-      replaceChildren() {}, append() {}, setAttribute() {},
+      replaceChildren() {}, append() {}, setAttribute() {}, removeAttribute(name) { delete this[name]; },
     });
     return nodes.get(id);
   };
   const context = vm.createContext({
-    fetch, console, clearTimeout, encodeURIComponent, maplibregl,
+    fetch, console, clearTimeout, encodeURIComponent, URL, maplibregl,
     window: { matchMedia: () => ({ matches: true }), addEventListener() {} },
     document: { getElementById: node, readyState: 'loading', addEventListener() {},
       createElement: () => ({}) },
@@ -33,8 +33,8 @@ function frontend(fetch, maplibregl) {
 }
 
 const pair = {
-  before: { date: '2026-10-10', browse: 'https://example.test/before.png' },
-  after: { date: '2026-10-22', browse: 'https://example.test/after.png' },
+  before: { date: '2026-10-10', browse: 'https://nisar.asf.earthdatacloud.nasa.gov/BROWSE/before.png' },
+  after: { date: '2026-10-22', browse: 'https://nisar.asf.earthdatacloud.nasa.gov/BROWSE/after.png' },
 };
 const result = () => ({ ok: true, json: async () => ({ pairs: [pair] }) });
 
@@ -69,12 +69,26 @@ test('late responses cannot replace a newer location or repopulate results after
   assert.equal(controller.state().lastComparedPoint, null);
 });
 
-test('comparison images use the server proxy and preserve the complete encoded URL', () => {
+test('comparison images unwrap encoded preview URLs and remove appended image paths', () => {
   const { controller, node } = frontend(async () => result());
   const url = 'https://nisar.asf.earthdatacloud.nasa.gov/BROWSE/sample.png';
-  controller.setImage('image', 'error', url);
-  assert.equal(node('image').src, '/api/preview?url=' + encodeURIComponent(url));
+  for (const input of [url, encodeURIComponent(url),
+    '/api/preview?url=' + encodeURIComponent(url),
+    '/api/preview?url=' + encodeURIComponent('/api/preview?url=' + encodeURIComponent(url)),
+    url + '/sample.png?download=1#preview']) {
+    controller.setImage('image', 'error', input);
+    assert.equal(node('image').src, url);
+  }
   node('image').onerror();
+  assert.equal(node('image').hidden, true);
+  assert.equal(node('error').hidden, false);
+});
+
+test('invalid image links clear the old source and show the image error', () => {
+  const { controller, node } = frontend(async () => result());
+  controller.setImage('image', 'error', 'https://nisar.asf.earthdatacloud.nasa.gov/BROWSE/sample.png');
+  controller.setImage('image', 'error', '/api/preview?url=' + encodeURIComponent('https://evil.example/image.png'));
+  assert.equal(node('image').src, undefined);
   assert.equal(node('image').hidden, true);
   assert.equal(node('error').hidden, false);
 });

@@ -202,7 +202,33 @@
     });
   }
 
-  // 수정된 부분: duplicate URL parsers and debug logs removed; use the validated server proxy.
+  // 수정된 부분: keep one URL parser for original and preview-wrapped image links.
+  // 수정된 부분: unwrap preview URLs before assigning the original NASA image URL.
+  function extractImageUrl(input) {
+    if (typeof input !== "string" || input.length > 8000) throw new Error("Invalid image URL");
+    let raw = input.trim();
+    for (let depth = 0; depth < 5; depth++) {
+      if (/^https?%3a/i.test(raw)) raw = decodeURIComponent(raw);
+      const parsed = new URL(raw, "https://sarscope.invalid");
+      if (parsed.pathname === "/api/preview" && parsed.searchParams.has("url")) {
+        raw = parsed.searchParams.get("url");
+        continue;
+      }
+      if (parsed.protocol !== "https:" || parsed.hostname !== "nisar.asf.earthdatacloud.nasa.gov" ||
+          parsed.port || parsed.username || parsed.password || !parsed.pathname.startsWith("/BROWSE/")) {
+        throw new Error("Invalid NASA image URL");
+      }
+      const match = parsed.pathname.match(/\.png(?=\/|$)/i);
+      if (!match) throw new Error("Image extension not found");
+      // Remove appended paths, query strings and fragments left by wrapped links.
+      parsed.pathname = parsed.pathname.slice(0, match.index + match[0].length);
+      parsed.search = "";
+      parsed.hash = "";
+      return parsed.href;
+    }
+    throw new Error("Too many nested preview URLs");
+  }
+
   function setImage(elementId, errorId, url) {
     const image = $(elementId);
     const error = $(errorId);
@@ -221,8 +247,12 @@
       console.error("Image loading failed:", image.src);
     };
 
-    // The server validates NASA URLs and handles authentication and fallbacks.
-    image.src = `/api/preview?url=${encodeURIComponent(url)}`;
+    try {
+      image.src = extractImageUrl(url);
+    } catch (error) {
+      image.removeAttribute("src");
+      image.onerror();
+    }
   }
 
   function renderPair(pair) {
@@ -237,7 +267,8 @@
     ).textContent = `${pair.polarization} · ${pair.dayGap} days apart`;
     for (const item of ["before", "after"]) {
       const link = $(item + "Source");
-      link.href = pair[item].browse;
+      try { link.href = extractImageUrl(pair[item].browse); }
+      catch { link.removeAttribute("href"); }
       link.title = pair[item].id;
       setImage(item + "Image", item + "Error", pair[item].browse);
     }
