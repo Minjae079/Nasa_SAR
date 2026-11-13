@@ -8,5 +8,4 @@
   pointer-events: none;
 }
 #globeViz, #globeViz.maplibregl-map { background: transparent; }
-.scene-globe.is-detail .starfield,
-.scene-globe.is-comparing .starfield { visibility: hidden; }
+.scene-globe.is-detail .starfield { visibility: hidden; }
