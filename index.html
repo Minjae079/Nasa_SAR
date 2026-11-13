@@ -25,6 +25,7 @@
     // 수정된 부분: load the restored direct-image loader instead of a cached proxy loader.
     await import("./app.js?v=20261112-selection-motion");
   </script>
+  <script type="module" src="./database-status.js"></script>
 </head>
 <body>
   <div class="site-frame">
@@ -201,6 +202,8 @@
         <div><span>03</span><strong>Compare NISAR imagery</strong><p>Use ASF search results to display two matched GCOV observation previews. Numeric change detection requires further processing.</p></div>
       </div>
       <div class="modal-caution">This is a learning/prototyping interface. It does not yet detect surface changes. Verify hackathon pre-work rules before incorporating code into a competition submission.</div>
+      <p id="databaseStatus" role="status" aria-live="polite">Analysis database connection has not been checked.</p>
+      <button class="btn btn-outline" id="checkDatabase" type="button">Check data connection</button>
       <button class="btn btn-primary" id="startExplore">Start exploring <span>↗</span></button>
     </section>
   </div>
