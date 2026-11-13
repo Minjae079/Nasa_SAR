@@ -1,0 +1,12 @@
+/* Real catalog coordinates; the transparent map canvas places Earth in front. */
+.scene-globe .starfield {
+  opacity: 1;
+  background-image: url('./assets/sky/constellation-sky.svg');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  pointer-events: none;
+}
+#globeViz, #globeViz.maplibregl-map { background: transparent; }
+.scene-globe.is-detail .starfield,
+.scene-globe.is-comparing .starfield { visibility: hidden; }

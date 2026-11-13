@@ -8,7 +8,7 @@ import {GET as getPreview} from './api/preview.js';
 
 const root=path.dirname(fileURLToPath(import.meta.url));
 const port=Number(process.env.PORT || 3000);
-const types={'.html':'text/html; charset=utf-8','.js':'application/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.json':'application/json; charset=utf-8','.png':'image/png','.ico':'image/x-icon'};
+const types={'.html':'text/html; charset=utf-8','.js':'application/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.json':'application/json; charset=utf-8','.svg':'image/svg+xml','.png':'image/png','.ico':'image/x-icon'};
 http.createServer(async(req,res)=>{
   try {
     const u=new URL(req.url,`http://localhost:${port}`);
