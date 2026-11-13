@@ -2,7 +2,7 @@
 (() => {
   "use strict";
   const IIT = Object.freeze({ lat: 41.83531, lng: -87.627, name: "Illinois Tech" });
-  const START = { center: [-86, 34], zoom: 0.5, bearing: 0, pitch: 0 };
+  const START = { center: [-86, 34], zoom: 1.0, bearing: 0, pitch: 0 };
   const DETAIL_ZOOM = 6;
   const PHOTO_ZOOM = 2.5;
   // 수정된 부분: duration in milliseconds for View local map.
@@ -56,14 +56,11 @@
       map.on("movestart", event => {
         if (event.originalEvent) {
           cameraDestination = null;
-          selectedLocation = false;
         }
       });
-      map.on("dragstart", () => { selectedLocation = false; });
       map.on("moveend", () => {
         cameraDestination = null;
         syncZoomMode();
-        if (mode === "map") updateLocationFromCenter();
       });
       map.on("click", event => {
         const { lat, lng } = event.lngLat;
@@ -115,6 +112,8 @@
     if (selectedLocation) return;
     const { lat, lng } = map.getCenter();
     currentTarget = { lat, lng, name: isNearIIT(lat, lng) ? IIT.name : "Map center" };
+    // Choose once on entering the local map; camera movement preserves this point.
+    selectedLocation = true;
     updateLocationPanel();
   }
   // 수정된 부분: zoom changes only UI overlays; the underlying map stays mounted.
