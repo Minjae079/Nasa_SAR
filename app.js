@@ -2,7 +2,7 @@
 (() => {
   "use strict";
   const IIT = Object.freeze({ lat: 41.83531, lng: -87.627, name: "Illinois Tech" });
-  const START = { center: [-86, 34], zoom: 1.0, bearing: 0, pitch: 0 };
+  const START = { center: [-86, 34], zoom: 2.0, bearing: 0, pitch: 0 };
   const DETAIL_ZOOM = 6;
   const PHOTO_ZOOM = 2.5;
   // 수정된 부분: duration in milliseconds for View local map.
