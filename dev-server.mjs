@@ -7,6 +7,7 @@ import {GET as getCoverage} from './api/coverage.js';
 import {GET as getPreview} from './api/preview.js';
 import {GET as getDatabaseStatus} from './api/database-status.js';
 import {GET as getAnalyses} from './api/analyses.js';
+import {GET as getModelResults} from './api/model-results.js';
 import {isPublicFile} from './lib/staticFiles.js';
 import {existsSync} from 'node:fs';
 
@@ -24,7 +25,8 @@ http.createServer(async(req,res)=>{
       res.writeHead(405, {Allow: 'GET, HEAD'}); res.end('Method not allowed'); return;
     }
     const handler = {'/api/coverage': getCoverage, '/api/preview': getPreview,
-      '/api/database-status': getDatabaseStatus, '/api/analyses': getAnalyses}[u.pathname];
+      '/api/database-status': getDatabaseStatus, '/api/analyses': getAnalyses,
+      '/api/model-results': getModelResults}[u.pathname];
     if (handler) {
       const response=await handler(new Request(u.href));
       res.writeHead(response.status,Object.fromEntries(response.headers));

@@ -7,7 +7,7 @@ button.addEventListener('click', async () => {
     const response = await fetch('/api/database-status', { signal: AbortSignal.timeout(15000), cache: 'no-store' });
     const result = await response.json();
     status.textContent = response.ok && result.connected
-      ? 'Connected. Analysis database and file storage are ready.'
+      ? 'Connected. Model result storage is ready.'
       : result.error === 'SUPABASE_NOT_CONFIGURED'
         ? 'Connection setup is pending.' : 'Connection unavailable. Please try again later.';
   } catch { status.textContent = 'Connection unavailable. Please try again later.'; }

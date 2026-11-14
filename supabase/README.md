@@ -1,5 +1,9 @@
 # SARSCOPE Supabase setup
 
+> Current website flow: PNG + JSON in Storage, without SQL table queries.
+> Follow **CONNECT.md** for current setup. The SQL schema below is retained
+> for future analysis-history features and is not required by the PNG viewer.
+
 Target project: `jywbvxyyumznolgultci`
 
 Dashboard: https://supabase.com/dashboard/project/jywbvxyyumznolgultci
