@@ -7,6 +7,7 @@ import numpy as np
 from PIL import Image
 import torch
 from deepflood import SmallUNet4, anchors, predict_scene, export_prediction
+from make_demo import generate_demo
 
 
 class WaterFixture(torch.nn.Module):
@@ -25,6 +26,20 @@ class AdapterTests(unittest.TestCase):
         model = SmallUNet4().eval()
         with torch.inference_mode():
             self.assertEqual(tuple(model(torch.zeros(1, 2, 128, 128)).shape), (1, 4, 128, 128))
+
+    def test_demo_is_explicitly_synthetic_and_unpublished(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root, output = generate_demo(directory)
+            with np.load(root / 'prepared.npz', allow_pickle=False) as data:
+                self.assertEqual(data['x'].shape, (2, 256, 384))
+                self.assertEqual(data['valid_mask'].dtype, np.bool_)
+            manifest = json.loads((root / 'manifest.json').read_text(encoding='utf-8'))
+            self.assertTrue(manifest['synthetic'])
+            self.assertEqual(len(manifest['results']), 3)
+            self.assertTrue(all(row['published'] is False for row in manifest['results']))
+            for filename in ['input.png', 'reference.png', 'prediction.png']:
+                with Image.open(output / filename) as image:
+                    self.assertEqual(image.size, (384, 256))
 
     def test_tiling_nodata_and_small_scene(self):
         for shape in [(20, 25), (129, 250)]:

@@ -15,4 +15,6 @@
 .model-legend li { display: flex; align-items: center; gap: 7px; }
 .model-legend li span { display: inline-block; width: 14px; height: 14px; border: 1px solid #82979e; border-radius: 3px; }
 .nodata-swatch { background: #14252d; }
+.demo-load { margin-left: 8px; }
+.synthetic-notice { border: 1px solid #e1b75b; padding: 12px; color: #ffe2a4 !important; background: #4e381f66; }
 @media(max-width: 800px) { .model-results-launch { padding: 9px; font-size: 10px; } .header-right { display: none; } }

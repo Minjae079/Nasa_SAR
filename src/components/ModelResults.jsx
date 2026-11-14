@@ -17,21 +17,22 @@ function ResultCard({ result }) {
 }
 
 export function ModelResults({ active = false }) {
-  const [state, setState] = useState({ loading: false, results: [], message: 'View available model-generated images.' });
+  const [state, setState] = useState({ loading: false, results: [], demo: false, message: 'View available model-generated images.' });
   const request = useRef(null);
   const [selectedId, setSelectedId] = useState('');
   useEffect(() => () => request.current?.abort(), []);
-  const load = useCallback(async () => {
+  const load = useCallback(async (mode = 'real') => {
     request.current?.abort();
     const controller = new AbortController();
     request.current = controller;
     setState(previous => ({ ...previous, loading: true, message: 'Loading model results…' }));
     try {
-      const data = await fetchJson('/api/model-results', { signal: controller.signal });
+      const data = await fetchJson(mode === 'demo' ? '/api/demo-results' : '/api/model-results', { signal: controller.signal });
       if (controller.signal.aborted) return;
       if (!Array.isArray(data.results)) throw new Error('Invalid result list');
-      setState({ loading: false, results: data.results, message: data.results.length
-        ? 'Model outputs are shown below. Reload to refresh expired image links.'
+      setState({ loading: false, results: data.results, demo: data.synthetic === true, message: data.results.length
+        ? data.synthetic === true ? 'Synthetic test images loaded. Select an input, reference or pipeline output below.'
+          : 'Model outputs are shown below. Reload to refresh expired image links.'
         : 'Model results are not available yet. Please check back later.' });
     } catch {
       if (!controller.signal.aborted) setState(previous => ({ ...previous, loading: false,
@@ -43,7 +44,9 @@ export function ModelResults({ active = false }) {
   return <section aria-labelledby="model-results-heading">
     <h3 id="model-results-heading">Model results</h3>
     <p id="modelResultsStatus" role="status" aria-live="polite">{state.message}</p>
-    <button className="btn btn-outline" id="loadModelResults" type="button" disabled={state.loading} onClick={load}>Load / refresh results</button>
+    <button className="btn btn-outline" id="loadModelResults" type="button" disabled={state.loading} onClick={() => load()}>Load / refresh results</button>
+    {import.meta.env.DEV && <button className="btn btn-outline demo-load" type="button" disabled={state.loading} onClick={() => load('demo')}>Load synthetic demo</button>}
+    {state.demo && <p className="synthetic-notice" role="status">SYNTHETIC DEMO — artificial input and analytic fixture output. Not real satellite data, not a trained model prediction. Date is a placeholder.</p>}
     {state.results.length > 0 && <label className="model-result-select">Choose model output
       <select value={selected.id} onChange={event => setSelectedId(event.target.value)}>
         {state.results.map(result => <option key={result.id} value={result.id}>{result.title} · {result.observed_at}</option>)}

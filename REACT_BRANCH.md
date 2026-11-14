@@ -1,5 +1,9 @@
 # React 전환 실험 브랜치
 
+임시 합성 데이터 테스트는 [DEMO_DATA_KO.md](DEMO_DATA_KO.md)를 참고한다.
+`python ml/make_demo.py` 후 개발 화면에서 Load synthetic demo를 누른다.
+실제 Supabase 결과를 수정하지 않으며 운영 빌드에는 제공하지 않는다.
+
 추가 모델 연결: 홈/상단의 Model results가 전용 결과 뷰어를 연다.
 Python 추론·PNG 내보내기와 게시 방법은 [ml/README_KO.md](ml/README_KO.md)를 따른다.
 입력 데이터와 실제 학습된 체크포인트가 없어서 실제 예측 생성·업로드는 아직 하지 않았다.

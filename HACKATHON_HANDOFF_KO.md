@@ -1,5 +1,11 @@
 # SARSCOPE 현장 실행·재구축 안내 및 GPT 인수인계 프롬프트
 
+> **합성 테스트 데이터:** 실제 입력/가중치가 없을 때
+> `python ml/make_demo.py`로 임시 NPZ와 PNG를 생성할 수 있다.
+> React 개발 서버의 Model results → Load synthetic demo에서 확인한다.
+> [DEMO_DATA_KO.md](DEMO_DATA_KO.md)를 읽고 합성 자료를 실제 학습/관측 결과로
+> 설명하거나 Supabase 운영 결과에 게시하지 않는다. 생성 데이터는 Git에서 제외된다.
+
 > **모델 연결 추가 안내:** React 브랜치의 홈/상단 Model results 버튼이 전용
 > PNG 결과 뷰어를 연다(이전 How it works 내부 목록을 대체).
 > `ml/deepflood.py`에 제공 U-Net 구조 기반 추론·PNG/레이블 내보내기,

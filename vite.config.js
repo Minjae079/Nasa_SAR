@@ -1,12 +1,13 @@
 import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
 import { apiMiddleware } from './lib/apiRouter.js';
+import { demoMiddleware } from './lib/demoResults.js';
 import fs from 'node:fs';
 import path from 'node:path';
 
 function privateSourceMiddleware(req, res, next) {
   const pathname = new URL(req.url, 'http://localhost').pathname;
-  if (/^\/(lib|supabase|test|tools|ml|ml-output)(\/|$)/.test(pathname) ||
+  if (/^\/(lib|supabase|test|tools|ml|ml-output|demo-data)(\/|$)/.test(pathname) ||
       /\.(pt|pth|npz|npy|h5|hdf5)$/i.test(pathname) ||
       /^\/(vite\.config\.js|dev-server\.mjs)$/.test(pathname)) {
     res.writeHead(403); res.end('Forbidden'); return;
@@ -24,6 +25,7 @@ export default defineConfig(({ mode }) => {
     plugins: [react(), {
       name: 'sarscope-api',
       configureServer(server) {
+        server.middlewares.use(demoMiddleware());
         server.middlewares.use(apiMiddleware);
         server.middlewares.use(privateSourceMiddleware);
       },
@@ -49,7 +51,7 @@ export default defineConfig(({ mode }) => {
       },
     }],
     server: { host: '127.0.0.1', port: Number(process.env.PORT || 3000), strictPort: true,
-      fs: { deny: ['.env', '.env.*', '**/.git/**', '**/supabase/**', '**/ml-output/**',
+      fs: { deny: ['.env', '.env.*', '**/.git/**', '**/supabase/**', '**/ml-output/**', '**/demo-data/**',
         '**/*.pt', '**/*.pth', '**/*.npz', '**/*.npy', '**/*.h5', '**/*.hdf5',
         path.resolve('lib').replaceAll('\\', '/') + '/**',
         path.resolve('api').replaceAll('\\', '/') + '/**'] } },

@@ -8,7 +8,7 @@ import { parseModelManifest } from '../lib/modelManifest.js';
 
 export async function publishModelResult(client, entry, png) {
   parseModelManifest({ version: 1, results: [entry] });
-  if (entry.published !== true || !Buffer.from(png).subarray(0, 8).equals(Buffer.from([137,80,78,71,13,10,26,10]))) {
+  if (entry.published !== true || entry.synthetic === true || entry.is_demo === true || !Buffer.from(png).subarray(0, 8).equals(Buffer.from([137,80,78,71,13,10,26,10]))) {
     throw new Error('Need a published model entry and a PNG file.');
   }
   const check = await client.storage.getBucket('sarscope-data');

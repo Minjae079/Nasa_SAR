@@ -7,6 +7,7 @@
 > The older buildless deployment instructions below describe the main branch.
 
 Model integration on the React branch: [ml/README_KO.md](ml/README_KO.md).
+Local synthetic test data: [DEMO_DATA_KO.md](DEMO_DATA_KO.md).
 The home/header **Model results** button opens the dedicated output viewer.
 No real inference result has been generated: trained weights and prepared inputs
 must be supplied by the model team. Python adapter tests use synthetic fixtures only.
