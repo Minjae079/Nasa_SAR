@@ -20,7 +20,7 @@ function frontend(fetch, maplibregl, reduceMotion = true) {
       createElement: () => ({}) },
   });
   // Expose the real controller without booting WebGL or CDN assets.
-  const source = readFileSync(new URL('../app.js', import.meta.url), 'utf8');
+  const source = readFileSync(new URL('../app.js', import.meta.url), 'utf8').replace('export function', 'function') + '\ncreateExplorer(maplibregl);';
   vm.runInContext(source.replace('  function start() {', `
     globalThis.controller = {
       openComparison, setImage, initGlobe, syncZoomMode, goHome, openMap, setBasemap,

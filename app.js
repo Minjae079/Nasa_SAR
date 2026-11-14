@@ -1,5 +1,5 @@
 /* SARSCOPE: basemaps are geographic context, not SAR measurements. */
-(() => {
+export function createExplorer(maplibregl) {
   "use strict";
   const IIT = Object.freeze({ lat: 41.83531, lng: -87.627, name: "Illinois Tech" });
   const START = { center: [-86, 34], zoom: 2.0, bearing: 0, pitch: 0 };
@@ -12,6 +12,12 @@
   const mapScene = $("mapScene");
   const compareScene = $("compareScene");
   const fallback = $("globeFallback");
+  const listeners = [];
+  let disposed = false;
+  function listen(target, event, handler) {
+    target.addEventListener(event, handler);
+    listeners.push(() => target.removeEventListener(event, handler));
+  }
   let map;
   let marker;
   let mode = "globe";
@@ -82,7 +88,7 @@
         $("mapLoadStatus").textContent = "Some map tiles could not load. Check your connection and try zooming again.";
       });
       map.on("idle", () => { $("mapLoadStatus").hidden = true; });
-      window.addEventListener("resize", resizeGlobe);
+      listen(window, "resize", resizeGlobe);
     } catch (error) {
       console.error("Unable to create Earth map", error);
       fallback.hidden = false;
@@ -378,6 +384,7 @@
           !bounds.every(p => Array.isArray(p) && p.length === 2 && p.every(Number.isFinite))) return;
       const [[south, west], [north, east]] = bounds;
       if (south >= north || west >= east || south < -90 || north > 90 || west < -180 || east > 180) return;
+      if (disposed) return;
       rasterConfig = config;
       installRasterLayers();
     } catch (error) { console.debug("Optional SAR layers unavailable", error); }
@@ -397,7 +404,7 @@
     badge.classList.add("is-ready");
     badge.querySelector("span:last-child").textContent = "Prepared raster overlay loaded - review quality";
     badge.querySelector(".data-status-icon").textContent = "OK";
-    $("compareSlider").addEventListener("input", event => {
+    listen($("compareSlider"), "input", event => {
       const opacity = Number(event.target.value) / 100;
       map.setPaintProperty("sar-after", "raster-opacity", opacity * 0.8);
       $("comparePct").textContent = Math.round(opacity * 100) + "% after";
@@ -414,55 +421,54 @@
     $("aboutModal").hidden = !visible;
   }
   function bindControls() {
-    $("brandHome").addEventListener("click", goHome);
-    $("compareBack").addEventListener("click", goHome);
-    $("compareMap").addEventListener("click", () =>
+    listen($("brandHome"), "click", goHome);
+    listen($("compareBack"), "click", goHome);
+    listen($("compareMap"), "click", () =>
       openMap(currentTarget.lat, currentTarget.lng)
     );
-    $("backToComparison").addEventListener("click", showComparisonFromMap);
-    $("pairSelect").addEventListener("change", (e) => {
+    listen($("backToComparison"), "click", showComparisonFromMap);
+    listen($("pairSelect"), "change", (e) => {
       const pair = comparisonPairs[Number(e.target.value)];
       if (pair) renderPair(pair);
     });
-    $("navExplore").addEventListener("click", goHome);
-    $("navHow").addEventListener("click", () => toggleModal(true));
-    $("learnMore").addEventListener("click", () => toggleModal(true));
-    $("mobileAbout").addEventListener("click", () => toggleModal(true));
-    $("toggleLocationPanel").addEventListener("click", () => {
+    listen($("navExplore"), "click", goHome);
+    listen($("navHow"), "click", () => toggleModal(true));
+    listen($("learnMore"), "click", () => toggleModal(true));
+    listen($("mobileAbout"), "click", () => toggleModal(true));
+    listen($("toggleLocationPanel"), "click", () => {
       const expanded =
         $("toggleLocationPanel").getAttribute("aria-expanded") === "true";
       setLocationPanelExpanded(!expanded);
     });
-    $("closeAbout").addEventListener("click", () => toggleModal(false));
-    $("startExplore").addEventListener("click", () => toggleModal(false));
-    $("aboutModal").addEventListener("click", (event) => {
+    listen($("closeAbout"), "click", () => toggleModal(false));
+    listen($("startExplore"), "click", () => toggleModal(false));
+    listen($("aboutModal"), "click", (event) => {
       if (event.target === $("aboutModal")) toggleModal(false);
     });
-    document.addEventListener("keydown", (event) => {
+    listen(document, "keydown", (event) => {
       if (event.key === "Escape") toggleModal(false);
     });
-    $("exploreIIT").addEventListener("click", () =>
+    listen($("exploreIIT"), "click", () =>
       flyTo(IIT.lat, IIT.lng, IIT.name)
     );
-    $("railIIT").addEventListener("click", () =>
+    listen($("railIIT"), "click", () =>
       flyTo(IIT.lat, IIT.lng, IIT.name)
     );
-    $("jumpToIITFromMap").addEventListener("click", () =>
+    listen($("jumpToIITFromMap"), "click", () =>
       openMap(IIT.lat, IIT.lng)
     );
-    $("backToGlobe").addEventListener("click", goHome);
-    $("resetGlobe").addEventListener("click", goHome);
-    $("zoomInGlobe").addEventListener("click", () => globeZoom("in"));
-    $("zoomOutGlobe").addEventListener("click", () => globeZoom("out"));
-    $("streetLayer").addEventListener("click", () => setBasemap("streets"));
-    $("satelliteLayer").addEventListener("click", () =>
+    listen($("backToGlobe"), "click", goHome);
+    listen($("resetGlobe"), "click", goHome);
+    listen($("zoomInGlobe"), "click", () => globeZoom("in"));
+    listen($("zoomOutGlobe"), "click", () => globeZoom("out"));
+    listen($("streetLayer"), "click", () => setBasemap("streets"));
+    listen($("satelliteLayer"), "click", () =>
       setBasemap("satellite")
     );
   }
   // 수정된 부분: the Close label now lives in HTML instead of being overwritten at startup.
   function start() {
-    // 기존 비교 화면을 지구본 내부로 이동
-    globeScene.appendChild(compareScene);
+    // React keeps the comparison overlay inside GlobeScene.
 
     bindControls();
     initGlobe();
@@ -470,9 +476,14 @@
     // Prepared overlays attach to the shared map after its style loads.
     tryLoadSarLayers();
   }
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", start, { once: true });
-  } else {
-    start();
-  }
-})();
+  return {
+    start,
+    destroy() {
+      disposed = true;
+      comparisonRequestId++;
+      listeners.splice(0).forEach(remove => remove());
+      if (map) map.remove();
+      map = null;
+    },
+  };
+}

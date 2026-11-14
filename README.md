@@ -1,5 +1,11 @@
 # SARSCOPE · NISAR Browse Comparison (Vercel-ready)
 
+> **React experiment: `feature/react-vite-migration`**. This branch uses React +
+> Vite with the same Vercel APIs and Supabase Storage. Start with `npm ci` and
+> `npm run dev`; build with `npm run build` (output `dist`). Follow
+> [REACT_BRANCH.md](REACT_BRANCH.md) for Preview deployment and returning to main.
+> The older buildless deployment instructions below describe the main branch.
+
 A mobile-responsive 3D Earth explorer that uses **real NASA/ASF observation metadata and browse PNG URLs** to show two comparable NISAR L2 GCOV acquisition previews side by side. This is a functional **metadata-and-preview browser**, not an SAR numeric change detector.
 
 ## What it does

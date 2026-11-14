@@ -1,0 +1,3 @@
+#root { min-height: 100vh; }
+.model-result-card { margin-block: 20px; }
+.model-result-card img { display: block; width: 100%; height: auto; border-radius: 8px; }

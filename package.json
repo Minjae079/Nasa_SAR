@@ -3,15 +3,23 @@
   "version": "0.2.0",
   "private": true,
   "type": "module",
-  "description": "Interactive NASA NISAR browse preview explorer; no raw SAR processing",
+  "description": "React Earth explorer and NASA NISAR model-output viewer",
   "scripts": {
     "dev": "node dev-server.mjs",
-    "test": "node --test"
+    "test": "node --test",
+    "build": "vite build",
+    "preview": "vite preview"
   },
   "engines": {
     "node": ">=22.16.0"
   },
   "dependencies": {
-    "@supabase/supabase-js": "2.119.0"
+    "@supabase/supabase-js": "2.119.0",
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "6.3.0",
+    "vite": "8.3.8"
   }
 }

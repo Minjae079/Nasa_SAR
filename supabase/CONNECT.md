@@ -1,5 +1,9 @@
 # PNG-only model results
 
+React experiment branch: the same server APIs and environment variables are
+used. Run npm run dev (Vite + API adapter), npm run build, npm run preview.
+React result and connection components are in src/components. See REACT_BRANCH.md.
+
 Project: jywbvxyyumznolgultci. Use the existing PRIVATE sarscope-data bucket.
 The website now reads JSON and PNG files, not the existing SQL tables.
 Do not delete the tables; they are simply unused by this flow.
