@@ -6,6 +6,11 @@
 > [REACT_BRANCH.md](REACT_BRANCH.md) for Preview deployment and returning to main.
 > The older buildless deployment instructions below describe the main branch.
 
+Model integration on the React branch: [ml/README_KO.md](ml/README_KO.md).
+The home/header **Model results** button opens the dedicated output viewer.
+No real inference result has been generated: trained weights and prepared inputs
+must be supplied by the model team. Python adapter tests use synthetic fixtures only.
+
 A mobile-responsive 3D Earth explorer that uses **real NASA/ASF observation metadata and browse PNG URLs** to show two comparable NISAR L2 GCOV acquisition previews side by side. This is a functional **metadata-and-preview browser**, not an SAR numeric change detector.
 
 ## What it does

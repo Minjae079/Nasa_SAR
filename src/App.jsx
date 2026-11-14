@@ -1,14 +1,21 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { createExplorer } from '../app.js';
 import { Topbar } from './components/Topbar.jsx';
 import { GlobeScene } from './components/GlobeScene.jsx';
 import { LocalMap } from './components/LocalMap.jsx';
 import { Footer } from './components/Footer.jsx';
 import { AboutDialog } from './components/AboutDialog.jsx';
+import { ModelResultsDialog } from './components/ModelResultsDialog.jsx';
 
 const engineUrl = 'https://unpkg.com/maplibre-gl@6.18.0/dist/maplibre-gl.mjs';
 let enginePromise;
 export function App() {
+  const [showResults, setShowResults] = useState(false);
+  function openResults() {
+    // The existing controller owns the legacy About overlay only.
+    document.getElementById('aboutModal').hidden = true;
+    setShowResults(true);
+  }
   useEffect(() => {
     let cancelled = false;
     let explorer;
@@ -31,10 +38,11 @@ export function App() {
 
   return <>
     <div className="site-frame">
-      <Topbar />
-      <main className="main-content"><GlobeScene /><LocalMap /></main>
+      <Topbar onOpenModelResults={openResults} />
+      <main className="main-content"><GlobeScene onOpenModelResults={openResults} /><LocalMap /></main>
       <Footer />
     </div>
-    <AboutDialog />
+    <AboutDialog onOpenModelResults={openResults} />
+    <ModelResultsDialog open={showResults} onClose={() => setShowResults(false)} />
   </>;
 }

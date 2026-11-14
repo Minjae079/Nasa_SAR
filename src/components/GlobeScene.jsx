@@ -1,6 +1,6 @@
 import { ComparisonScene } from './ComparisonScene.jsx';
 
-export function GlobeScene() {
+export function GlobeScene({ onOpenModelResults }) {
   return (<section id="globeScene" className="scene scene-globe" aria-label="Interactive 3D Earth">
         <div className="starfield" aria-hidden="true"></div>
         <div className="globe-aura" aria-hidden="true"></div>
@@ -17,6 +17,7 @@ export function GlobeScene() {
           <h1>See beyond<br /><span>the surface.</span></h1>
           <p className="hero-description">Rotate the Earth, choose a location, and compare real NISAR SAR observation previews from two matched dates.</p>
           <div className="hero-actions">
+            <button className="btn btn-primary" type="button" onClick={onOpenModelResults}>View model results ↗</button>
             <button className="btn btn-primary" id="exploreIIT">Explore Illinois Tech <span className="btn-arrow">↗</span></button>
             <button className="btn btn-outline" id="learnMore">How it works <span className="btn-arrow">↗</span></button>
           </div>

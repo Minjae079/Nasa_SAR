@@ -5,3 +5,11 @@ dist/
 !.env.example
 .vercel/
 *.log
+__pycache__/
+ml-output/
+*.pt
+*.pth
+*.npy
+*.npz
+*.h5
+*.hdf5

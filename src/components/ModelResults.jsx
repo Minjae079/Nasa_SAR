@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { fetchJson } from '../lib/api.js';
 
 function ResultCard({ result }) {
@@ -9,14 +9,19 @@ function ResultCard({ result }) {
     {failed ? <p role="status">Image unavailable. Reload results to refresh the link.</p>
       : <img src={result.image_url} alt={result.title} loading="lazy" decoding="async" onError={() => setFailed(true)} />}
     <p>{result.description}</p>
+    {result.classes?.length > 0 && <ul className="model-legend" aria-label="Classification legend">
+      {result.classes.map(item => <li key={item.id}><span style={{ backgroundColor: item.color }} />{item.name}</li>)}
+      <li><span className="nodata-swatch" />Transparent: no valid observation</li>
+    </ul>}
   </article>;
 }
 
-export function ModelResults() {
+export function ModelResults({ active = false }) {
   const [state, setState] = useState({ loading: false, results: [], message: 'View available model-generated images.' });
   const request = useRef(null);
+  const [selectedId, setSelectedId] = useState('');
   useEffect(() => () => request.current?.abort(), []);
-  async function load() {
+  const load = useCallback(async () => {
     request.current?.abort();
     const controller = new AbortController();
     request.current = controller;
@@ -32,11 +37,18 @@ export function ModelResults() {
       if (!controller.signal.aborted) setState(previous => ({ ...previous, loading: false,
         message: 'Unable to refresh results. Please try again later.' }));
     }
-  }
+  }, []);
+  useEffect(() => { if (active) load(); }, [active, load]);
+  const selected = state.results.find(result => result.id === selectedId) || state.results[0];
   return <section aria-labelledby="model-results-heading">
     <h3 id="model-results-heading">Model results</h3>
     <p id="modelResultsStatus" role="status" aria-live="polite">{state.message}</p>
     <button className="btn btn-outline" id="loadModelResults" type="button" disabled={state.loading} onClick={load}>Load / refresh results</button>
-    <div id="modelResultsGallery">{state.results.map(result => <ResultCard key={`${result.id}:${result.image_url}`} result={result} />)}</div>
+    {state.results.length > 0 && <label className="model-result-select">Choose model output
+      <select value={selected.id} onChange={event => setSelectedId(event.target.value)}>
+        {state.results.map(result => <option key={result.id} value={result.id}>{result.title} · {result.observed_at}</option>)}
+      </select>
+    </label>}
+    <div id="modelResultsGallery">{selected && <ResultCard key={`${selected.id}:${selected.image_url}`} result={selected} />}</div>
   </section>;
 }

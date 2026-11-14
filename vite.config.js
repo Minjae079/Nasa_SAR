@@ -6,7 +6,8 @@ import path from 'node:path';
 
 function privateSourceMiddleware(req, res, next) {
   const pathname = new URL(req.url, 'http://localhost').pathname;
-  if (/^\/(lib|supabase|test|tools)(\/|$)/.test(pathname) ||
+  if (/^\/(lib|supabase|test|tools|ml|ml-output)(\/|$)/.test(pathname) ||
+      /\.(pt|pth|npz|npy|h5|hdf5)$/i.test(pathname) ||
       /^\/(vite\.config\.js|dev-server\.mjs)$/.test(pathname)) {
     res.writeHead(403); res.end('Forbidden'); return;
   }
@@ -48,7 +49,8 @@ export default defineConfig(({ mode }) => {
       },
     }],
     server: { host: '127.0.0.1', port: Number(process.env.PORT || 3000), strictPort: true,
-      fs: { deny: ['.env', '.env.*', '**/.git/**', '**/supabase/**',
+      fs: { deny: ['.env', '.env.*', '**/.git/**', '**/supabase/**', '**/ml-output/**',
+        '**/*.pt', '**/*.pth', '**/*.npz', '**/*.npy', '**/*.h5', '**/*.hdf5',
         path.resolve('lib').replaceAll('\\', '/') + '/**',
         path.resolve('api').replaceAll('\\', '/') + '/**'] } },
     preview: { host: '127.0.0.1', port: 4173, strictPort: true },

@@ -39,6 +39,7 @@ test('React shell, Vite HTTP assets and API adapter work without exposing env fi
     assert.ok([403, 404].includes(env.status));
     assert.equal((await env.text()).includes('SUPABASE_SECRET_KEY='), false);
     assert.equal((await nativeFetch(base + '/lib/supabaseServer.js')).status, 403);
+    assert.equal((await nativeFetch(base + '/ml/deepflood.py')).status, 403);
 
     const { App } = await server.ssrLoadModule('/src/App.jsx');
     const markup = renderToString(createElement(App));
@@ -47,6 +48,8 @@ test('React shell, Vite HTTP assets and API adapter work without exposing env fi
       assert.ok(markup.includes(`id="${id}"`), id);
     }
     assert.ok(markup.indexOf('id="compareScene"') < markup.indexOf('id="mapScene"'));
+    assert.ok(markup.includes('View model results'));
+    assert.ok(markup.includes('id="model-results-title"'));
   } finally {
     await server?.close();
     globalThis.fetch = nativeFetch;

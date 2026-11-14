@@ -4,6 +4,12 @@ React experiment branch: the same server APIs and environment variables are
 used. Run npm run dev (Vite + API adapter), npm run build, npm run preview.
 React result and connection components are in src/components. See REACT_BRANCH.md.
 
+The React branch now has a dedicated **Model results** button on the home/header.
+It opens the model PNG viewer and loads the published list automatically.
+Python inference/export and upload tooling: see ml/README_KO.md.
+The old How it works result-list placement below is replaced by this viewer;
+the About dialog retains the Storage connection check.
+
 Project: jywbvxyyumznolgultci. Use the existing PRIVATE sarscope-data bucket.
 The website now reads JSON and PNG files, not the existing SQL tables.
 Do not delete the tables; they are simply unused by this flow.

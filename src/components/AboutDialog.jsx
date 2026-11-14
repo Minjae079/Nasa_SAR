@@ -1,7 +1,6 @@
 import { ConnectionStatus } from './ConnectionStatus.jsx';
-import { ModelResults } from './ModelResults.jsx';
 
-export function AboutDialog() {
+export function AboutDialog({ onOpenModelResults }) {
   return (<div id="aboutModal" className="modal-backdrop" hidden>
     <section className="about-modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
       <button className="modal-close" id="closeAbout" aria-label="Close dialog">×</button>
@@ -14,7 +13,8 @@ export function AboutDialog() {
         <div><span>03</span><strong>Compare NISAR imagery</strong><p>Use ASF search results to display two matched GCOV observation previews. Numeric change detection requires further processing.</p></div>
       </div>
       <div className="modal-caution">This is a learning/prototyping interface. It does not yet detect surface changes. Verify hackathon pre-work rules before incorporating code into a competition submission.</div>
-      <ConnectionStatus /><hr /><ModelResults />
+      <ConnectionStatus /><hr />
+      <button className="btn btn-outline" type="button" onClick={onOpenModelResults}>View model results</button>
       <button className="btn btn-primary" id="startExplore">Start exploring <span>↗</span></button>
     </section>
   </div>);

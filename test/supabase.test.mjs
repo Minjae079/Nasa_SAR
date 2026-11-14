@@ -20,6 +20,11 @@ test('manifest signs only explicitly published PNG paths', () => {
     assert.throws(() => parseModelManifest({ version: 1, results: [{ ...sample, image_path }] }));
   }
   assert.throws(() => parseModelManifest({ version: 1, results: [sample, sample] }));
+  const classes = ['Inundated vegetation', 'Dry vegetation', 'Open water', 'Other']
+    .map((name, id) => ({ id, name, color: '#123456' }));
+  assert.deepEqual(parseModelManifest({ version: 1, results: [{ ...sample, classes }] })[0].classes, classes);
+  assert.throws(() => parseModelManifest({ version: 1, results: [{ ...sample,
+    classes: classes.map(item => ({ ...item, color: 'url(unsafe)' })) }] }));
 });
 test('Storage-only APIs cover setup, missing files, publication and signing', async () => {
   const saved = { url: process.env.SUPABASE_URL, key: process.env.SUPABASE_SECRET_KEY,

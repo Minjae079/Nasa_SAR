@@ -1,5 +1,14 @@
 # SARSCOPE 현장 실행·재구축 안내 및 GPT 인수인계 프롬프트
 
+> **모델 연결 추가 안내:** React 브랜치의 홈/상단 Model results 버튼이 전용
+> PNG 결과 뷰어를 연다(이전 How it works 내부 목록을 대체).
+> `ml/deepflood.py`에 제공 U-Net 구조 기반 추론·PNG/레이블 내보내기,
+> `tools/publish-model-result.mjs`에 단일 결과 게시 도구를 추가했다.
+> [ml/README_KO.md](ml/README_KO.md)의 입력 자료 출처와 전처리 요구사항을 먼저 읽는다.
+> 실제 데이터·학습된 가중치가 없어 실제 결과 생성은 아직 미완료다.
+> 코드의 지역·클래스는 DeepFlood/Sentinel-1 자료와 일치하는 것으로 보이며,
+> NISAR 입력과 동일하다고 가정하지 않는다. 앞선 전처리 셀을 확인해야 한다.
+
 > **최신 변경: React 실험 브랜치 추가**
 >
 > 기존 vanilla 사이트는 `main`, React + Vite 실험은
